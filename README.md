@@ -33,47 +33,84 @@
 AgentForge로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 검증된 실전 아키텍처를 계승하여 **풀스택 모노레포(Clean Architecture)** 형태로 구성되며, 각 티어가 느슨하게 결합되어 독립적으로 실행·배포될 수 있습니다.
 
 ```mermaid
-graph TD
-    subgraph Client["Frontend Layer (Vite + React / Streamlit)"]
-        UI_Vite["Vite + React Modern Web UI<br/>(Tailwind CSS + Nginx Docker)"]
-        UI_Streamlit["Streamlit Rapid UI<br/>(Data/AI Dashboard)"]
-    end
-
-    subgraph BackendGateway["Backend Layer (FastAPI Clean Architecture)"]
-        API["FastAPI App (src/main.py & src/bootstrap.py)"]
-        subgraph LayeredArch["src/ 계층형 아키텍처"]
-            CoreEngine["src/core (복사된 Standalone Core 엔진: SSE 스트리머, 런타임)"]
-            AdapterBase["src/core/adapter.py (표준 BaseAgentAdapter)"]
-            AppService["src/application (에이전트 서비스 & 오케스트레이션)"]
-            Domain["src/domain (비즈니스 엔티티 & 인터페이스)"]
-            Infra["src/infrastructure (LLM 연동, 외부 API, 저장소)"]
+graph TB
+    %% Client Layer
+    subgraph Client["Frontend Layer (선택형 웹 클라이언트)"]
+        subgraph ReactApp["Vite + React SPA"]
+            UI_Comp["React Components<br/>(Chat Box, Streaming Bubble, Tools Status)"]
+            UI_API["API Client (src/api)<br/>(fetch /invoke & EventSource /stream)"]
+            UI_Docker["Nginx Reverse Proxy & Security<br/>(docker/default.conf)"]
+            UI_Comp --> UI_API
+            UI_API -.-> UI_Docker
         end
+        UI_Streamlit["Streamlit Dashboard<br/>(Rapid Prototype UI)"]
     end
 
-    subgraph Frameworks["선택된 에이전트 프레임워크 (src/application & src/infrastructure)"]
-        FW1["1. LangChain (LCEL)"]
-        FW2["2. LangGraph (StateGraph)"]
-        FW3["3. DeepAgent (Deep Reasoning)"]
-        FW4["4. Agent Development Kit (ADK)"]
-        FW5["5. AWS Bedrock Agent"]
+    %% Backend Layer
+    subgraph BackendGateway["Backend Layer (FastAPI Clean Architecture)"]
+        direction TB
+        MainAPI["FastAPI Entrypoint (src/main.py & src/bootstrap.py)<br/>- POST /invoke (Blocking)<br/>- POST /stream (SSE Streaming)<br/>- GET /health (Healthcheck)"]
+
+        subgraph CoreEngine["Standalone Core Engine (src/core/) - 복사형 독립 런타임"]
+            Streaming["SSE Token Streamer<br/>(Async Chunk Generator)"]
+            RuntimeCtx["Runtime Context<br/>(Concurrency & Semaphore)"]
+            AdapterBase["BaseAgentAdapter<br/>(표준 에이전트 추상화 인터페이스)"]
+        end
+
+        subgraph CleanArch["Clean Architecture Layers (src/)"]
+            direction TB
+            AppLayer["Application Layer (src/application/)<br/>- Agent Orchestration Services<br/>- DTOs & Use Cases"]
+            DomainLayer["Domain Layer (src/domain/)<br/>- Business Entities & States<br/>- Agent / Repository Interfaces"]
+            InfraLayer["Infrastructure Layer (src/infrastructure/)<br/>- LLM Provider Connectors<br/>- Framework Adapters Implementation<br/>- External APIs & DB Storage"]
+            
+            AppLayer --> DomainLayer
+            AppLayer --> InfraLayer
+            InfraLayer -.-> DomainLayer
+        end
+
+        MainAPI --> CoreEngine
+        MainAPI --> AppLayer
+        InfraLayer --> AdapterBase
     end
 
-    subgraph Deploy["Deployment Layer (pay k8s 구조 계승)"]
-        Compose["docker-compose.yml (Local Dev)"]
-        K8sDev["k8s/dev/ (개발 환경 배포 매니페스트)"]
-        K8sPrd["k8s/prd/ (운영 환경 배포 매니페스트)"]
-        K8sDeploy["k8s-deploy.sh (통합 배포 스크립트)"]
+    %% Frameworks
+    subgraph Frameworks["선택된 에이전트 프레임워크 (5종 지원)"]
+        FW_LC["1. LangChain (LCEL / Chains)"]
+        FW_LG["2. LangGraph (StateGraph / Multi-Turn)"]
+        FW_DA["3. DeepAgent (Deep Reasoning / Planning)"]
+        FW_ADK["4. ADK (Agent Development Kit)"]
+        FW_BR["5. AWS Bedrock (Bedrock Agent / Knowledge Base)"]
     end
 
-    UI_Vite -->|REST /invoke, SSE /stream| API
-    UI_Streamlit -->|REST /invoke, SSE /stream| API
-    API --> LayeredArch
-    AdapterBase --> FW1
-    AdapterBase --> FW2
-    AdapterBase --> FW3
-    AdapterBase --> FW4
-    AdapterBase --> FW5
-    BackendGateway -.-> Deploy
+    %% Deployment Layer
+    subgraph Deployment["Deployment & DevOps Layer (pay k8s 구조 계승)"]
+        Compose["Local Dev (docker-compose.yml)"]
+        DeployScript["k8s-deploy.sh (통합 배포 자동화)"]
+        
+        subgraph K8sEnvs["Kubernetes Environments"]
+            K8sDev["k8s/dev/ (개발 환경)<br/>- backend / frontend Deployments<br/>- ConfigMap & Secret-External"]
+            K8sPrd["k8s/prd/ (운영 환경)<br/>- HA Deployment & Resource Limit<br/>- Ingress & Security Context"]
+        end
+        
+        DeployScript --> K8sDev
+        DeployScript --> K8sPrd
+    end
+
+    %% Connections
+    UI_API -->|HTTP REST /invoke| MainAPI
+    UI_API -->|SSE /stream (Token Streaming)| MainAPI
+    UI_Streamlit -->|HTTP / SSE| MainAPI
+
+    AdapterBase ===> FW_LC
+    AdapterBase ===> FW_LG
+    AdapterBase ===> FW_DA
+    AdapterBase ===> FW_ADK
+    AdapterBase ===> FW_BR
+
+    BackendGateway -.-> Compose
+    ReactApp -.-> Compose
+    BackendGateway -.-> Deployment
+    ReactApp -.-> Deployment
 ```
 
 ---
