@@ -131,7 +131,64 @@ AgentForge는 백엔드 표준 어댑터(`BaseAgentAdapter`) 패턴을 내장하
 
 ---
 
-## 📁 생성되는 프로젝트 구조
+## 🏛️ AgentForge 프레임워크 저장소 구조
+
+AgentForge 프레임워크 자체의 코드베이스는 표준 Python 패키지 레이아웃을 따르며, CLI 도구, 프로젝트 스캐폴딩 엔진, 모듈형 템플릿, 그리고 생성 프로젝트로 복사될 표준 Core 엔진 원본으로 구성됩니다.
+
+```text
+AgentForge/
+├── agentforge/                    # 핵심 Python 패키지 (CLI & 생성기 엔진)
+│   ├── cli/                       # CLI 도구 구현체 (Typer 기반)
+│   │   ├── commands/              # 세부 하위 명령어
+│   │   │   ├── new.py             # `agentforge new` (프로젝트 생성)
+│   │   │   ├── dev.py             # `agentforge dev` (로컬 동시 실행)
+│   │   │   ├── build.py           # `agentforge build` (Docker 빌드)
+│   │   │   └── deploy.py          # `agentforge deploy` (K8s 배포)
+│   │   └── main.py                # CLI 진입점 & 인터랙티브 TUI 마법사
+│   │
+│   ├── generator/                 # 프로젝트 스캐폴딩 및 템플릿 합성 엔진
+│   │   ├── copier.py              # Core 엔진 코드 복사 & 파일 주입 모듈
+│   │   ├── engine.py              # Jinja2 템플릿 렌더링 및 모듈 조합기
+│   │   └── validator.py           # 사용자 입력 파라미터 및 경로 검증기
+│   │
+│   ├── core/                      # 생성 프로젝트(backend/src/core/)로 복사될 독립 런타임 원본
+│   │   ├── adapter.py             # 표준 BaseAgentAdapter 인터페이스
+│   │   ├── config.py              # Pydantic Settings 환경 설정 베이스
+│   │   ├── logging.py             # 구조화 로깅 엔진
+│   │   └── streaming.py           # 실시간 SSE 스트리머 & 동시성 세마포어
+│   │
+│   └── templates/                 # 모듈 조합형 프로젝트 템플릿 저장소
+│       ├── backend/               # FastAPI 백엔드 기본 뼈대
+│       │   ├── src/
+│       │   └── frameworks/        # 5대 프레임워크별 어댑터/에이전트 템플릿
+│       │       ├── langchain/     # LangChain 체인/에이전트 보일러플레이트
+│       │       ├── langgraph/     # LangGraph StateGraph 보일러플레이트
+│       │       ├── deepagent/     # DeepAgent 추론 에이전트 보일러플레이트
+│       │       ├── adk/           # ADK 도구 연동형 에이전트 보일러플레이트
+│       │       └── bedrock/       # AWS Bedrock Agent 보일러플레이트
+│       │
+│       ├── frontend/              # 프론트엔드 모듈 템플릿
+│       │   ├── react-vite/        # Vite + React + Tailwind CSS 모던 UI
+│       │   └── streamlit/         # Streamlit 빠른 프로토타이핑 대시보드
+│       │
+│       └── k8s/                   # Kubernetes 실전 배포 매니페스트 템플릿
+│           ├── dev/               # 개발 환경 (Deployment, Service, ConfigMap)
+│           ├── prd/               # 운영 환경 (HA, 리소스 제한, Ingress)
+│           └── k8s-deploy.sh      # 원클릭 배포 자동화 스크립트
+│
+├── tests/                         # 프레임워크 자체 테스트 스위트
+│   ├── test_cli.py                # CLI 명령어 단위 테스트
+│   ├── test_generator.py          # 프로젝트 생성 및 Core 복사 무결성 검증
+│   └── test_templates.py          # 템플릿 구문 및 조합 빌드 테스트
+│
+├── pyproject.toml                 # 패키지 빌드 메타데이터 및 CLI 스크립트 엔트리포인트 (`agentforge`, `af`)
+├── LICENSE                        # MIT License
+└── README.md
+```
+
+---
+
+## 📁 생성되는 프로젝트 구조 (User Project Layout)
 
 `agentforge new` 명령으로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 실전 Clean Architecture 모노레포 구조를 기반으로 하며, 외부 프레임워크 저장소에 전혀 의존하지 않는 완전한 독립형(Standalone) 프로젝트입니다.
 
