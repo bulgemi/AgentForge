@@ -33,84 +33,81 @@
 AgentForge로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 검증된 실전 아키텍처를 계승하여 **풀스택 모노레포(Clean Architecture)** 형태로 구성되며, 각 티어가 느슨하게 결합되어 독립적으로 실행·배포될 수 있습니다.
 
 ```mermaid
-graph TB
-    %% Client Layer
-    subgraph Client["Frontend Layer (선택형 웹 클라이언트)"]
-        subgraph ReactApp["Vite + React SPA"]
-            UI_Comp["React Components<br/>(Chat Box, Streaming Bubble, Tools Status)"]
-            UI_API["API Client (src/api)<br/>(fetch /invoke & EventSource /stream)"]
-            UI_Docker["Nginx Reverse Proxy & Security<br/>(docker/default.conf)"]
-            UI_Comp --> UI_API
-            UI_API -.-> UI_Docker
-        end
-        UI_Streamlit["Streamlit Dashboard<br/>(Rapid Prototype UI)"]
+flowchart TD
+    %% 1. Frontend Layer
+    subgraph Frontend["Frontend Layer (사용자 인터페이스)"]
+        UI_Vite["Vite + React SPA<br/>(Components / Zustand / Tailwind)"]
+        UI_API["API Client (src/api)<br/>(REST fetch & SSE EventSource)"]
+        UI_Nginx["Nginx Web Server<br/>(docker/default.conf)"]
+        UI_Streamlit["Streamlit Dashboard<br/>(빠른 프로토타이핑 UI)"]
+
+        UI_Vite --> UI_API
+        UI_API -.-> UI_Nginx
     end
 
-    %% Backend Layer
-    subgraph BackendGateway["Backend Layer (FastAPI Clean Architecture)"]
-        direction TB
-        MainAPI["FastAPI Entrypoint (src/main.py & src/bootstrap.py)<br/>- POST /invoke (Blocking)<br/>- POST /stream (SSE Streaming)<br/>- GET /health (Healthcheck)"]
+    %% 2. Backend Layer (Clean Architecture)
+    subgraph Backend["Backend Layer (FastAPI Clean Architecture)"]
+        MainAPI["FastAPI App (src/main.py & src/bootstrap.py)<br/>• POST /invoke (Blocking)<br/>• POST /stream (SSE Streaming)<br/>• GET /health"]
 
-        subgraph CoreEngine["Standalone Core Engine (src/core/) - 복사형 독립 런타임"]
+        subgraph Core["Standalone Core (src/core/)"]
             Streaming["SSE Token Streamer<br/>(Async Chunk Generator)"]
-            RuntimeCtx["Runtime Context<br/>(Concurrency & Semaphore)"]
-            AdapterBase["BaseAgentAdapter<br/>(표준 에이전트 추상화 인터페이스)"]
+            RuntimeCtx["Runtime Context<br/>(동시성 세마포어)"]
+            AdapterBase["BaseAgentAdapter<br/>(표준 에이전트 인터페이스)"]
         end
 
-        subgraph CleanArch["Clean Architecture Layers (src/)"]
-            direction TB
-            AppLayer["Application Layer (src/application/)<br/>- Agent Orchestration Services<br/>- DTOs & Use Cases"]
-            DomainLayer["Domain Layer (src/domain/)<br/>- Business Entities & States<br/>- Agent / Repository Interfaces"]
-            InfraLayer["Infrastructure Layer (src/infrastructure/)<br/>- LLM Provider Connectors<br/>- Framework Adapters Implementation<br/>- External APIs & DB Storage"]
-            
-            AppLayer --> DomainLayer
-            AppLayer --> InfraLayer
-            InfraLayer -.-> DomainLayer
+        subgraph Application["Application Layer (src/application/)"]
+            AppService["Agent Services & Use Cases<br/>(오케스트레이션 및 워크플로우 제어)"]
         end
 
-        MainAPI --> CoreEngine
-        MainAPI --> AppLayer
-        InfraLayer --> AdapterBase
+        subgraph Domain["Domain Layer (src/domain/)"]
+            DomainModel["Entities & State Definitions<br/>(비즈니스 모델 및 인터페이스)"]
+        end
+
+        subgraph Infrastructure["Infrastructure Layer (src/infrastructure/)"]
+            InfraAdapter["Framework Adapters Implementation<br/>(LLM 공급자 / 도구 / 저장소 연동)"]
+        end
+
+        MainAPI --> Application
+        MainAPI --> Core
+        Application --> Domain
+        Application --> Infrastructure
+        Infrastructure --> AdapterBase
     end
 
-    %% Frameworks
-    subgraph Frameworks["선택된 에이전트 프레임워크 (5종 지원)"]
+    %% 3. Agent Frameworks (5 Supported)
+    subgraph Frameworks["지원 에이전트 프레임워크 (5종)"]
         FW_LC["1. LangChain (LCEL / Chains)"]
         FW_LG["2. LangGraph (StateGraph / Multi-Turn)"]
         FW_DA["3. DeepAgent (Deep Reasoning / Planning)"]
         FW_ADK["4. ADK (Agent Development Kit)"]
-        FW_BR["5. AWS Bedrock (Bedrock Agent / Knowledge Base)"]
+        FW_BR["5. AWS Bedrock (Bedrock Agent)"]
     end
 
-    %% Deployment Layer
-    subgraph Deployment["Deployment & DevOps Layer (pay k8s 구조 계승)"]
-        Compose["Local Dev (docker-compose.yml)"]
-        DeployScript["k8s-deploy.sh (통합 배포 자동화)"]
-        
-        subgraph K8sEnvs["Kubernetes Environments"]
-            K8sDev["k8s/dev/ (개발 환경)<br/>- backend / frontend Deployments<br/>- ConfigMap & Secret-External"]
-            K8sPrd["k8s/prd/ (운영 환경)<br/>- HA Deployment & Resource Limit<br/>- Ingress & Security Context"]
-        end
-        
+    %% 4. Deployment Layer
+    subgraph DevOps["배포 및 인프라 (Deployment)"]
+        Compose["docker-compose.yml<br/>(로컬 통합 개발 환경)"]
+        DeployScript["k8s-deploy.sh<br/>(통합 배포 자동화)"]
+        K8sDev["k8s/dev/<br/>(개발 환경 매니페스트)"]
+        K8sPrd["k8s/prd/<br/>(운영 환경 매니페스트)"]
+
         DeployScript --> K8sDev
         DeployScript --> K8sPrd
     end
 
-    %% Connections
-    UI_API -->|HTTP REST /invoke| MainAPI
-    UI_API -->|SSE /stream (Token Streaming)| MainAPI
-    UI_Streamlit -->|HTTP / SSE| MainAPI
+    %% Connections between layers (Node-to-Node only)
+    UI_API -->|POST /invoke, /stream| MainAPI
+    UI_Streamlit -->|REST & SSE| MainAPI
 
-    AdapterBase ===> FW_LC
-    AdapterBase ===> FW_LG
-    AdapterBase ===> FW_DA
-    AdapterBase ===> FW_ADK
-    AdapterBase ===> FW_BR
+    AdapterBase --> FW_LC
+    AdapterBase --> FW_LG
+    AdapterBase --> FW_DA
+    AdapterBase --> FW_ADK
+    AdapterBase --> FW_BR
 
-    BackendGateway -.-> Compose
-    ReactApp -.-> Compose
-    BackendGateway -.-> Deployment
-    ReactApp -.-> Deployment
+    MainAPI -.->|로컬 실행| Compose
+    UI_Nginx -.->|로컬 실행| Compose
+    MainAPI -.->|K8s 배포 매니페스트| DeployScript
+    UI_Nginx -.->|K8s 배포 매니페스트| DeployScript
 ```
 
 ---
