@@ -22,7 +22,7 @@
 | **코어 코드 의존성** | 중앙 코어 모듈을 참조(`import`)하는 종속형 구조 | **Core 엔진을 생성 프로젝트에 복사하여 100% 독립 실행(Standalone)** |
 | **에이전트 프레임워크** | LangChain / LangGraph 중심 | **LangChain, LangGraph, DeepAgent, ADK, AWS Bedrock 5종 전폭 지원** |
 | **인프라 의존성 (Bloat)** | Authelia, Nginx, Redis, DB 등 기본 탑재 (무거움) | **초경량 최소화 (Zero Bloat): 불필요한 외부 의존성 제거, 즉시 실행** |
-| **스택 범위** | 백엔드 API + 일부 테스트 UI 위주 | **Frontend (Next.js/Streamlit) + Backend (FastAPI) + K8s 매니페스트 풀스택 생성** |
+| **스택 범위** | 백엔드 API + 일부 테스트 UI 위주 | **Frontend (React+Vite / Streamlit) + Backend (FastAPI) + K8s 매니페스트 풀스택 생성** |
 | **템플릿 시스템** | 레거시 복잡 템플릿 | **현대적 코드베이스 기반 신규 클린 템플릿 전면 재작성** |
 | **CLI 생태계** | 저장소 스크립트(`bin/lapm`) 실행 방식 | **독립 설치형 글로벌 CLI (`agentforge`, `af`) 풀 라이프사이클 지원** |
 
@@ -30,25 +30,27 @@
 
 ## 🏗️ 아키텍처 (Architecture)
 
-AgentForge로 생성된 프로젝트는 **풀스택 모노레포** 형태로 구성되며, 각 티어가 느슨하게 결합되어 독립적으로 실행·배포될 수 있습니다.
+AgentForge로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 검증된 실전 아키텍처를 계승하여 **풀스택 모노레포(Clean Architecture)** 형태로 구성되며, 각 티어가 느슨하게 결합되어 독립적으로 실행·배포될 수 있습니다.
 
 ```mermaid
 graph TD
-    subgraph Client["Frontend Layer (선택형)"]
-        UI_Next["Next.js Modern Web UI<br/>(React + Tailwind CSS)"]
+    subgraph Client["Frontend Layer (Vite + React / Streamlit)"]
+        UI_Vite["Vite + React Modern Web UI<br/>(Tailwind CSS + Nginx Docker)"]
         UI_Streamlit["Streamlit Rapid UI<br/>(Data/AI Dashboard)"]
     end
 
-    subgraph Gateway["API & Runtime Layer (Backend)"]
-        API["FastAPI App (app/main.py)"]
-        subgraph CoreEngine["복사된 Standalone Core 엔진 (app/core)"]
-            Streaming["SSE Token Streamer"]
-            Runtime["Session & Concurrency Context"]
-            AdapterBase["BaseAgentAdapter (표준 추상화 인터페이스)"]
+    subgraph BackendGateway["Backend Layer (FastAPI Clean Architecture)"]
+        API["FastAPI App (src/main.py & src/bootstrap.py)"]
+        subgraph LayeredArch["src/ 계층형 아키텍처"]
+            CoreEngine["src/core (복사된 Standalone Core 엔진: SSE 스트리머, 런타임)"]
+            AdapterBase["src/core/adapter.py (표준 BaseAgentAdapter)"]
+            AppService["src/application (에이전트 서비스 & 오케스트레이션)"]
+            Domain["src/domain (비즈니스 엔티티 & 인터페이스)"]
+            Infra["src/infrastructure (LLM 연동, 외부 API, 저장소)"]
         end
     end
 
-    subgraph Frameworks["선택된 에이전트 프레임워크 (app/agents)"]
+    subgraph Frameworks["선택된 에이전트 프레임워크 (src/application & src/infrastructure)"]
         FW1["1. LangChain (LCEL)"]
         FW2["2. LangGraph (StateGraph)"]
         FW3["3. DeepAgent (Deep Reasoning)"]
@@ -56,20 +58,22 @@ graph TD
         FW5["5. AWS Bedrock Agent"]
     end
 
-    subgraph Deploy["Deployment Layer"]
+    subgraph Deploy["Deployment Layer (pay k8s 구조 계승)"]
         Compose["docker-compose.yml (Local Dev)"]
-        K8s["Kubernetes Manifests (k8s/)<br/>- Deployment / Service / Ingress"]
+        K8sDev["k8s/dev/ (개발 환경 배포 매니페스트)"]
+        K8sPrd["k8s/prd/ (운영 환경 배포 매니페스트)"]
+        K8sDeploy["k8s-deploy.sh (통합 배포 스크립트)"]
     end
 
-    UI_Next -->|REST /invoke, SSE /stream| API
+    UI_Vite -->|REST /invoke, SSE /stream| API
     UI_Streamlit -->|REST /invoke, SSE /stream| API
-    API --> CoreEngine
+    API --> LayeredArch
     AdapterBase --> FW1
     AdapterBase --> FW2
     AdapterBase --> FW3
     AdapterBase --> FW4
     AdapterBase --> FW5
-    API -.-> Deploy
+    BackendGateway -.-> Deploy
 ```
 
 ---
@@ -95,43 +99,70 @@ AgentForge는 백엔드 표준 어댑터(`BaseAgentAdapter`) 패턴을 내장하
 
 ## 📁 생성되는 프로젝트 구조
 
-`agentforge new` 명령으로 생성된 프로젝트는 외부 프레임워크 저장소에 전혀 의존하지 않는 완전한 독립형 프로젝트입니다.
+`agentforge new` 명령으로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 실전 Clean Architecture 모노레포 구조를 기반으로 하며, 외부 프레임워크 저장소에 전혀 의존하지 않는 완전한 독립형(Standalone) 프로젝트입니다.
 
 ```text
 my-awesome-agent/
-├── backend/                       # FastAPI 백엔드
-│   ├── app/
-│   │   ├── api/                   # REST 엔드포인트 라우터 (/invoke, /stream, /health)
+├── backend/                       # FastAPI 기반 백엔드 (Clean Architecture 계층 구조)
+│   ├── src/                       # 백엔드 핵심 소스
 │   │   ├── core/                  # 복사된 독립형 Standalone Core 엔진
 │   │   │   ├── adapter.py         # 표준 BaseAgentAdapter 인터페이스
-│   │   │   ├── config.py          # 환경변수(Pydantic Settings) 및 설정
+│   │   │   ├── config.py          # Pydantic Settings 환경 설정
 │   │   │   ├── logging.py         # 구조화 로깅
-│   │   │   └── streaming.py       # 실시간 SSE 스트리머 런타임
-│   │   ├── agents/                # 선택한 에이전트 구현체 (LangChain/LangGraph/Bedrock 등)
-│   │   │   ├── agent.py           # 구체적인 에이전트 프롬프트 및 비즈니스 로직
-│   │   │   └── tools/             # 에이전트 사용 커스텀 도구 정의
-│   │   └── main.py                # FastAPI 진입점
-│   ├── Dockerfile                 # 백엔드 경량 컨테이너 빌드 파일
-│   ├── requirements.txt           # 선택된 에이전트 프레임워크에 최적화된 패키지
-│   └── pyproject.toml
+│   │   │   └── streaming.py       # 실시간 SSE 스트리머 & 동시성 세마포어
+│   │   ├── domain/                # 비즈니스 도메인 모델, Entity, 인터페이스 규격
+│   │   ├── application/           # 에이전트 서비스, 유스케이스 오케스트레이션, DTO
+│   │   ├── infrastructure/        # 선택된 에이전트 프레임워크(LangGraph/Bedrock 등) 연동, 외부 API
+│   │   ├── common/                # 공통 에러 핸들링, 미들웨어, 유틸 상수
+│   │   ├── utils/                 # 도구 커넥터 및 헬퍼 유틸리티
+│   │   ├── main.py                # FastAPI 웹 애플리케이션 진입점
+│   │   └── bootstrap.py           # 서비스 컨테이너 초기화 및 런타임 바인딩
+│   ├── alembic/                   # 데이터베이스 마이그레이션 버전 관리
+│   ├── alembic.ini
+│   ├── tests/                     # 백엔드 단위/통합 테스트 스위트
+│   ├── Dockerfile                 # 백엔드 프로덕션 멀티스테이지 Dockerfile
+│   ├── pyproject.toml             # uv / pyproject 기반 의존성 정의
+│   └── uv.lock                    # 초고속 uv 패키지 락파일
 │
-├── frontend/                      # 선택한 프론트엔드 (Next.js 또는 Streamlit)
-│   ├── src/                       # (Next.js 선택 시) 모던 챗 인터페이스 & 반응형 컴포넌트
-│   │   ├── components/
-│   │   └── pages/
-│   ├── Dockerfile                 # 프론트엔드 컨테이너 빌드 파일
-│   └── package.json (or app.py)
+├── frontend/                      # Vite + React 기반 모던 웹 프론트엔드 (Streamlit 선택 가능)
+│   ├── src/                       # 프론트엔드 React 소스
+│   │   ├── api/                   # 백엔드 (/invoke, /stream SSE) 통신 API 클라이언트
+│   │   ├── components/            # 채팅 인터페이스, 메시지 카드, 상태 뱃지 등 UI 컴포넌트
+│   │   ├── pages/                 # 메인 화면 및 에이전트 대시보드 뷰
+│   │   ├── hooks/                 # 실시간 스트리밍 훅 및 상태 관리 훅
+│   │   ├── store/                 # 전역 상태 관리 (Zustand 등)
+│   │   ├── utils/                 # 공통 도우미 함수
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── docker/                    # 프론트엔드 컨테이너 빌드 & Nginx 웹서버 설정
+│   │   ├── Dockerfile             # Vite 빌드 결과물 서빙 경량 Nginx 컨테이너
+│   │   ├── default.conf           # SPA 라우팅 대응 Nginx 설정
+│   │   └── nginx-security.conf    # 보안 헤더 설정
+│   ├── package.json
+│   ├── vite.config.js             # Vite 번들러 설정
+│   └── tailwind.config.js         # Tailwind CSS 스타일링 설정
 │
-├── k8s/                           # Kubernetes 배포 매니페스트 (Kustomize/기본 매니페스트)
-│   ├── backend-deployment.yaml    # 백엔드 Deployment & Service
-│   ├── frontend-deployment.yaml   # 프론트엔드 Deployment & Service
-│   ├── ingress.yaml               # 통합 라우팅 Ingress (선택사항)
-│   └── configmap.yaml             # 환경설정
+├── k8s/                           # 환경 분리형 Kubernetes 실전 배포 매니페스트
+│   ├── dev/                       # 개발(Dev) 환경 매니페스트
+│   │   ├── backend/               # 백엔드 Deployment & Service
+│   │   ├── frontend/              # 프론트엔드 Deployment & Service
+│   │   ├── configmap.yaml         # 개발 환경 변수 ConfigMap
+│   │   ├── secret-external.yaml   # API Key 등 시크릿 템플릿
+│   │   ├── namespace.yaml
+│   │   └── serviceaccount.yaml
+│   ├── prd/                       # 운영(Prod) 환경 매니페스트 (고가용성 & 리소스 튜닝)
+│   │   ├── backend/
+│   │   ├── frontend/
+│   │   ├── configmap.yaml
+│   │   ├── secret-external.yaml
+│   │   ├── namespace.yaml
+│   │   └── serviceaccount.yaml
+│   └── k8s-deploy.sh              # 환경별 원클릭 클러스터 배포 쉘 스크립트
 │
-├── docker-compose.yml             # 로컬 통합 원클릭 실행 (Frontend + Backend)
-├── .env.example                   # API Key 등 환경 변수 템플릿
-└── README.md                      # 프로젝트 전용 가이드
-```
+├── docs/                          # 프로젝트 아키텍처, API 스펙, 개발 가이드 문서
+├── docker-compose.yml             # 로컬 통합 개발 환경 원클릭 실행 (Frontend + Backend)
+├── .env.sample                    # 환경 변수 샘플 파일
+└── README.md                      # 프로젝트 전용 안내 문서
 
 ---
 
@@ -155,8 +186,8 @@ uv tool install agentforge
 # 기본 사용법
 agentforge new <프로젝트명> --framework <프레임워크> --frontend <프론트엔드> --path <경로>
 
-# 예시 1: LangGraph + Next.js 조합으로 현재 디렉토리에 생성
-agentforge new customer-agent --framework langgraph --frontend nextjs --path .
+# 예시 1: LangGraph + React(Vite) 조합으로 현재 디렉토리에 생성
+agentforge new customer-agent --framework langgraph --frontend react --path .
 
 # 예시 2: AWS Bedrock + Streamlit 조합으로 특정 디렉토리에 생성
 agentforge new enterprise-bot --framework bedrock --frontend streamlit --path /data/projects
@@ -170,7 +201,7 @@ agentforge init
 | 옵션 | 단축형 | 설명 | 선택값 |
 | :--- | :--- | :--- | :--- |
 | `--framework` | `-f` | 에이전트 개발 프레임워크 | `langchain`, `langgraph`, `deepagent`, `adk`, `bedrock` |
-| `--frontend` | `-ui` | 프론트엔드 인터페이스 | `nextjs`, `streamlit`, `none` (headless 백엔드) |
+| `--frontend` | `-ui` | 프론트엔드 인터페이스 | `react` (Vite + Tailwind), `streamlit`, `none` (headless 백엔드) |
 | `--path` | `-p` | 프로젝트가 생성될 디렉토리 경로 | 기본값: 현재 작업 디렉토리 (`.`) |
 
 ---
@@ -180,12 +211,12 @@ agentforge init
 AgentForge CLI는 프로젝트 스캐폴딩부터 로컬 테스트, 빌드, 배포까지 전 주기(Full Lifecycle)를 지원합니다.
 
 ### 1) 로컬 개발 서버 실행 (`dev`)
-백엔드(FastAPI)와 프론트엔드(Next.js/Streamlit)를 한 번에 실행합니다.
+백엔드(FastAPI)와 프론트엔드(Vite React / Streamlit)를 한 번에 실행합니다.
 ```bash
 cd <프로젝트디렉토리>
 agentforge dev
 # Backend: http://localhost:8000 (API Docs: http://localhost:8000/docs)
-# Frontend: http://localhost:3000 (Next.js) 또는 http://localhost:8501 (Streamlit)
+# Frontend: http://localhost:5173 (React/Vite) 또는 http://localhost:8501 (Streamlit)
 ```
 
 ### 2) Docker 이미지 빌드 (`build`)
