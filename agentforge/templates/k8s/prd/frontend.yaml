@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ project_name }}-frontend
+  namespace: ai-agents
+  labels:
+    app: {{ project_name }}-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{ project_name }}-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ project_name }}-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: {{ project_name }}-frontend:v1.0.0
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ project_name }}-frontend
+  namespace: ai-agents
+spec:
+  selector:
+    app: {{ project_name }}-frontend
+  ports:
+    - port: 80
+      targetPort: 80

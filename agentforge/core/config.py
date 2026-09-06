@@ -1,0 +1,294 @@
+"""AgentForge Core Runtime Configuration Module.
+
+Provides Pydantic Settings management with environment variable and .env loading.
+Designed for standalone zero-dependency execution.
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+import json
+from typing import Any, List, Literal, Optional, Union
+from pydantic import AliasChoices, Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class BaseAppSettings(BaseSettings):
+    """Base application settings for AgentForge projects."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+        populate_by_name=True,
+        protected_namespaces=("settings_",),
+    )
+
+    # -------------------------------------------------------------------------
+    # 1. Core Application Settings
+    # -------------------------------------------------------------------------
+    app_name: str = Field(
+        default="AgentForge App",
+        validation_alias=AliasChoices("APP_NAME", "PROJECT_NAME"),
+        description="Application display and project name",
+    )
+    environment: Literal["dev", "prd", "test"] = Field(
+        default="dev",
+        validation_alias=AliasChoices("ENVIRONMENT", "ENV"),
+        description="Deployment target environment: dev, prd, or test",
+    )
+    host: str = Field(
+        default="0.0.0.0",
+        validation_alias=AliasChoices("HOST", "APP_HOST", "SERVER_HOST"),
+        description="Bind host for the API server",
+    )
+    port: int = Field(
+        default=8000,
+        validation_alias=AliasChoices("PORT", "APP_PORT", "SERVER_PORT"),
+        description="Port for the API server",
+    )
+    cors_origins: List[str] = Field(
+        default_factory=lambda: ["*"],
+        validation_alias=AliasChoices("CORS_ORIGINS", "CORS_ALLOWED_ORIGINS"),
+        description="List of allowed CORS origins or comma-separated string",
+    )
+    log_level: str = Field(
+        default="INFO",
+        validation_alias=AliasChoices("LOG_LEVEL", "LOGGING_LEVEL"),
+        description="Logging level (DEBUG, INFO, WARNING, ERROR)",
+    )
+    debug: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DEBUG", "APP_DEBUG"),
+        description="Enable debug mode and verbose tracebacks",
+    )
+
+    # -------------------------------------------------------------------------
+    # 2. Database Settings
+    # -------------------------------------------------------------------------
+    database_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABASE_URL", "DB_URL"),
+        description="Full database connection URL. If omitted, built from components.",
+    )
+    database_driver: str = Field(
+        default="postgresql+asyncpg",
+        validation_alias=AliasChoices("DATABASE_DRIVER", "DB_DRIVER"),
+        description="Database dialect and driver (e.g. postgresql+asyncpg, sqlite+aiosqlite)",
+    )
+    database_host: str = Field(
+        default="localhost",
+        validation_alias=AliasChoices("DATABASE_HOST", "DB_HOST"),
+        description="Database server hostname or IP",
+    )
+    database_port: int = Field(
+        default=5432,
+        validation_alias=AliasChoices("DATABASE_PORT", "DB_PORT"),
+        description="Database server port",
+    )
+    database_username: str = Field(
+        default="postgres",
+        validation_alias=AliasChoices("DATABASE_USERNAME", "DATABASE_USER", "DB_USER"),
+        description="Database username",
+    )
+    database_password: str = Field(
+        default="postgres",
+        validation_alias=AliasChoices("DATABASE_PASSWORD", "DB_PASSWORD"),
+        description="Database password",
+    )
+    database_dbname: str = Field(
+        default="agentforge",
+        validation_alias=AliasChoices("DATABASE_DBNAME", "DATABASE_NAME", "DB_NAME"),
+        description="Database catalog / database name",
+    )
+    database_pool_size: int = Field(
+        default=10,
+        validation_alias=AliasChoices("DATABASE_POOL_SIZE", "DB_POOL_SIZE"),
+        description="Base connection pool size",
+    )
+    database_max_overflow: int = Field(
+        default=20,
+        validation_alias=AliasChoices("DATABASE_MAX_OVERFLOW", "DB_MAX_OVERFLOW"),
+        description="Maximum connections to allow beyond pool_size",
+    )
+    database_pool_recycle: int = Field(
+        default=1800,
+        validation_alias=AliasChoices("DATABASE_POOL_RECYCLE", "DB_POOL_RECYCLE"),
+        description="Seconds before recycling persistent connections",
+    )
+    database_pool_timeout: int = Field(
+        default=30,
+        validation_alias=AliasChoices("DATABASE_POOL_TIMEOUT", "DB_POOL_TIMEOUT"),
+        description="Seconds to wait before timing out on pool checkout",
+    )
+    database_pool_pre_ping: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("DATABASE_POOL_PRE_PING", "DB_POOL_PRE_PING"),
+        description="Verify connection validity on checkout",
+    )
+
+    # -------------------------------------------------------------------------
+    # 3. Redis Settings
+    # -------------------------------------------------------------------------
+    redis_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("REDIS_URL"),
+        description="Full Redis URL. If omitted, built from components.",
+    )
+    redis_host: str = Field(
+        default="localhost",
+        validation_alias=AliasChoices("REDIS_HOST"),
+        description="Redis server hostname or IP",
+    )
+    redis_port: int = Field(
+        default=6379,
+        validation_alias=AliasChoices("REDIS_PORT"),
+        description="Redis server port",
+    )
+    redis_password: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("REDIS_PASSWORD"),
+        description="Optional Redis authentication password",
+    )
+    redis_db: int = Field(
+        default=0,
+        validation_alias=AliasChoices("REDIS_DB"),
+        description="Redis database index",
+    )
+    redis_ssl: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("REDIS_SSL"),
+        description="Enable SSL/TLS for Redis connection",
+    )
+
+    # -------------------------------------------------------------------------
+    # 4. Security Settings
+    # -------------------------------------------------------------------------
+    secret_key: str = Field(
+        default="change-me-in-production-at-least-32-chars-long",
+        validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET_KEY"),
+        description="Cryptographic secret key for signing tokens and sessions",
+    )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        validation_alias=AliasChoices("JWT_ALGORITHM"),
+        description="JWT signing algorithm",
+    )
+    access_token_expire_minutes: int = Field(
+        default=60,
+        validation_alias=AliasChoices("ACCESS_TOKEN_EXPIRE_MINUTES", "JWT_ACCESS_TOKEN_EXPIRE_MINUTES"),
+        description="Access token validity period in minutes",
+    )
+    refresh_token_expire_days: int = Field(
+        default=7,
+        validation_alias=AliasChoices("REFRESH_TOKEN_EXPIRE_DAYS", "JWT_REFRESH_TOKEN_EXPIRE_DAYS"),
+        description="Refresh token validity period in days",
+    )
+
+    # -------------------------------------------------------------------------
+    # 5. LLM Settings
+    # -------------------------------------------------------------------------
+    default_provider: str = Field(
+        default="openai",
+        validation_alias=AliasChoices("DEFAULT_PROVIDER", "LLM_PROVIDER"),
+        description="Default LLM provider (openai, anthropic, google, bedrock, etc.)",
+    )
+    default_model: str = Field(
+        default="gpt-4o",
+        validation_alias=AliasChoices("DEFAULT_MODEL", "LLM_MODEL", "OPENAI_MODEL_NAME"),
+        description="Default LLM model identifier",
+    )
+    timeout: float = Field(
+        default=60.0,
+        validation_alias=AliasChoices("LLM_TIMEOUT", "TIMEOUT", "LLM_TIMEOUT_SEC"),
+        description="Timeout in seconds for LLM provider API calls",
+    )
+    max_retries: int = Field(
+        default=3,
+        validation_alias=AliasChoices("MAX_RETRIES", "LLM_MAX_RETRIES"),
+        description="Maximum retry attempts on transient LLM errors",
+    )
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY", "LLM_API_KEY"),
+        description="OpenAI API authentication key",
+    )
+    anthropic_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"),
+        description="Anthropic API authentication key",
+    )
+    google_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY"),
+        description="Google Gemini API authentication key",
+    )
+
+    # -------------------------------------------------------------------------
+    # Validators
+    # -------------------------------------------------------------------------
+    @field_validator("environment", mode="before")
+    @classmethod
+    def normalize_environment(cls, v: Any) -> str:
+        """Normalize common environment aliases to dev, prd, or test."""
+        if isinstance(v, str):
+            cleaned = v.strip().lower()
+            if cleaned in ("development", "local", "dev"):
+                return "dev"
+            if cleaned in ("production", "prod", "prd"):
+                return "prd"
+            if cleaned in ("testing", "test"):
+                return "test"
+            return cleaned
+        return "dev"
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> List[str]:
+        """Support parsing JSON arrays, comma-delimited strings, or lists."""
+        if isinstance(v, str):
+            v_str = v.strip()
+            if not v_str:
+                return ["*"]
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except Exception:
+                    pass
+            return [part.strip() for part in v_str.split(",") if part.strip()]
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if str(item).strip()]
+        return ["*"]
+
+    # -------------------------------------------------------------------------
+    # Derived Properties
+    # -------------------------------------------------------------------------
+    @property
+    def resolved_database_url(self) -> str:
+        """Construct the database URL if not explicitly configured."""
+        if self.database_url:
+            return self.database_url
+        if self.database_driver.startswith("sqlite"):
+            return f"{self.database_driver}:///./agentforge.db"
+        return (
+            f"{self.database_driver}://{self.database_username}:{self.database_password}"
+            f"@{self.database_host}:{self.database_port}/{self.database_dbname}"
+        )
+
+    @property
+    def resolved_redis_url(self) -> str:
+        """Construct the Redis URL if not explicitly configured."""
+        if self.redis_url:
+            return self.redis_url
+        scheme = "rediss" if self.redis_ssl else "redis"
+        auth = f":{self.redis_password}@" if self.redis_password else ""
+        return f"{scheme}://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+
+@lru_cache()
+def get_settings() -> BaseAppSettings:
+    """Cached singleton accessor for application settings."""
+    return BaseAppSettings()

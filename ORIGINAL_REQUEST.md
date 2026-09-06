@@ -1,0 +1,72 @@
+# Original User Request
+
+## 2026-09-06T00:42:36Z
+
+AgentForge 프레임워크 저장소 구조(`agentforge/core`, `agentforge/templates`, `agentforge/cli`, `agentforge/generator`)를 구현하고, `pay` 아키텍처 기반의 인증(ID/PW, SAML, LDAP), PostgreSQL DB, Redis 세션, 프론트엔드(채팅 스트리밍, 관리자 사용자 관리 화면) 멀티 엔트리 풀스택 모노레포 보일러플레이트를 완성한 후 전면적인 테스트 및 코드 리뷰를 수행합니다.
+
+Working directory: /home/donghun/AntigravityProjects/AgentForge
+Integrity mode: development
+
+### Reference Resources
+- GitHub Issue: https://github.com/bulgemi/AgentForge/issues/1
+- Reference Codebase (pay): `/home/donghun/.gemini/antigravity/brain/106b65a8-624b-4e91-971a-eeac39d4ba6c/scratch/pay`
+- Specification & Design Doc: README.md
+
+---
+
+## Requirements
+
+### R1. Core 런타임 엔진 구현 (`agentforge/core/`)
+- 생성 프로젝트(`backend/src/core/`)로 100% 복사되어 독립 실행되는 불변 공통 엔진을 작성합니다.
+- `adapter.py`: 5대 에이전트 프레임워크(LangChain, LangGraph, DeepAgent, ADK, Bedrock) 표준 `BaseAgentAdapter` 인터페이스 및 표준 청크 이벤트(`AgentChunk`, `AgentEventType`) 정의.
+- `streaming.py`: 비동기 제너레이터를 FastAPI SSE 스트리밍으로 변환하는 `SSETokenStreamer` 및 동시성 제어 세마포어(`RuntimeContext`).
+- `database.py`: SQLAlchemy/SQLModel 기반 `Database` 싱글톤 커넥터, 동기/비동기 세션 제너레이터, DB ping, 페이징 헬퍼(`Page`, `PageableParams`).
+- `logging.py` & `config.py`: 구조화 JSON 로거(`setup_logger`) 및 Pydantic `BaseAppSettings`.
+
+### R2. 풀스택 모노레포 템플릿 구현 (`agentforge/templates/`)
+- `pay` 저장소의 검증된 Clean Architecture를 계승한 템플릿 코드베이스를 구축합니다.
+- **백엔드 (`templates/backend/`)**:
+  - `src/domain/`: 사용자, 인증 세션, 채팅 메시지/인터럽트 엔티티 및 포트 인터페이스.
+  - `src/application/`: ID/PW, LDAP, SAML 인증 서비스, 사용자 관리 서비스, 채팅 세션 서비스.
+  - `src/infrastructure/`: SQLModel DB 모델, Native JWT, LDAP3, PySAML2, Redis 세션/블랙리스트/RateLimiter, REST 라우터(`/api/v1/auth`, `/api/v1/admin/users`, `/api/v1/chats`).
+  - `src/bootstrap.py` & `src/main.py`: Core + Auth 중첩 Lifespan 및 FastAPI 앱 조립.
+  - `frameworks/`: 5종 에이전트 프레임워크별 `BaseAgentAdapter` 구현 보일러플레이트.
+  - `alembic/`: 사용자 및 채팅 테이블 초기 마이그레이션 스크립트.
+  - `pyproject.toml` (uv 기반) 및 `Dockerfile`.
+- **프론트엔드 (`templates/frontend/react-vite/`)**:
+  - 멀티 엔트리포인트 구성: 일반 사용자용 채팅 포털(`src/App.jsx`, `index.html`)과 관리자용 사용자 관리 포털(`src/admin/AdminApp.jsx`, `admin.html`) 분리 빌드.
+  - `src/auth/`: `AuthProvider`, `LoginForm`(ID/PW, LDAP 탭, SAML 버튼), `InitialPasswordChangePage`.
+  - `src/components/chat/`: SSE 실시간 스트리밍 대화창, `TerminalConsole`, `InterruptApprovalCard`.
+  - `src/components/settings/` & `src/admin/`: `AccountManagementPanel` 계정 관리 UI.
+  - `vite.config.js`, `tailwind.config.js`, `package.json`, Nginx Dockerfile.
+- **인프라 (`templates/infra/`, `templates/k8s/`)**:
+  - `docker-compose.yml`: PostgreSQL + Redis + Backend + Frontend 통합 로컬 개발 환경.
+  - Kubernetes 매니페스트 (dev/prd) 및 원클릭 배포 스크립트(`k8s-deploy.sh`).
+
+### R3. CLI & Scaffolding Generator 연동 및 README.md 갱신
+- `agentforge/cli/` (Typer 기반: `new`, `dev`, `build`, `deploy`, 대화형 `main.py`) 및 `agentforge/generator/` (copier, engine, validator) 구현.
+- `README.md`의 프레임워크 저장소 구조와 생성 프로젝트 구조 최신화.
+- 패키지 빌드 메타데이터(`pyproject.toml`) 엔트리포인트(`agentforge`, `af`) 설정.
+
+### R4. 전면 테스트, 코드 리뷰 및 검증
+- 프레임워크 자체 단위 테스트(`tests/test_cli.py`, `tests/test_generator.py`, `tests/test_core.py`) 작성 및 통과.
+- `agentforge new test-agent` 실행을 통한 엔드투엔드 프로젝트 생성 무결성 검증 (Core 복사, 템플릿 파일 생성, 의존성 문법 검사).
+- 정적 분석 및 보안/아키텍처 리뷰 수행.
+
+---
+
+## Acceptance Criteria
+
+### Core & Templates
+- [ ] `agentforge/core/`에 `adapter.py`, `streaming.py`, `database.py`, `logging.py`, `config.py`가 정상 구현되고 모듈 간 순환 참조가 없음
+- [ ] `agentforge/templates/backend/`에 ID/PW, LDAP, SAML 인증 프로바이더 및 Redis 세션/Rate Limiter, 사용자 관리, 채팅 스트리밍 라우터가 온전히 구성됨
+- [ ] `agentforge/templates/frontend/react-vite/`에 사용자 채팅 포털과 관리자 포털 멀티 엔트리가 구현되어 정상 빌드됨
+- [ ] `agentforge/templates/infra/docker-compose.yml`에 Postgres + Redis + Backend + Frontend가 올바르게 정의됨
+
+### CLI & Generator
+- [ ] `agentforge/cli/` 및 `agentforge/generator/`가 정상 구동되어 임의 경로에 신규 프로젝트를 독립 실행형으로 스캐폴딩할 수 있음
+- [ ] `README.md`가 확정된 구조로 최신화됨
+
+### Quality & Verification
+- [ ] `pytest tests/` 실행 시 모든 프레임워크 테스트가 100% 통과함
+- [ ] 생성된 테스트 프로젝트의 파이썬 코드 컴파일 및 기본 임포트 테스트 에러 없음

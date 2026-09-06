@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ project_name }}-config
+  namespace: ai-agents
+data:
+  APP_ENV: "prd"
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  LDAP_ENABLED: "true"
+  SAML_ENABLED: "true"

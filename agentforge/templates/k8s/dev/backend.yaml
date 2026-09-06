@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ project_name }}-backend
+  namespace: ai-agents
+  labels:
+    app: {{ project_name }}-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ project_name }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{ project_name }}-backend
+    spec:
+      containers:
+        - name: backend
+          image: {{ project_name }}-backend:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: {{ project_name }}-config
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ project_name }}-backend
+  namespace: ai-agents
+spec:
+  selector:
+    app: {{ project_name }}-backend
+  ports:
+    - port: 8000
+      targetPort: 8000

@@ -135,6 +135,27 @@ AgentForge는 백엔드 표준 어댑터(`BaseAgentAdapter`) 패턴을 내장하
 
 ---
 
+## 🔐 기본 제공 엔터프라이즈 기능 (Enterprise Features)
+
+AgentForge로 생성되는 모든 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소에서 검증된 엔터프라이즈급 인증, 데이터베이스, 관리자 거버넌스 체계를 기본 탑재합니다.
+
+| 분류 | 세부 기능 | 구현 기술 및 특징 |
+| :--- | :--- | :--- |
+| **다중 인증 (Multi-Auth)** | **ID/Password** | PBKDF2/Bcrypt/Argon2 솔팅 해싱 및 비밀번호 복잡도/잠금 정책 |
+| | **사내 LDAP** | `ldap3` 기반 Active Directory / OpenLDAP 연동 및 계정 자동 프로비저닝 |
+| | **SAML 2.0 SSO** | `pysaml2` 기반 Service Provider(SP) 메타데이터 교환 및 ACS Assertion 검증 |
+| **세션 & 보안 (Security)** | **토큰 & 분산 세션** | Native JWT Access/Refresh 토큰 및 Redis 분산 세션 저장소 |
+| | **토큰 취소 (Blacklist)** | 로그아웃 및 세션 만료 시 즉시 토큰 무효화 (`auth:blacklist:{jti}`) |
+| | **Rate Limiting** | 무차별 대입(Brute-Force) 공격 방지 슬라이딩 윈도우 요청 제한 |
+| **데이터베이스 (Database)** | **PostgreSQL 16** | `SQLModel` + `SQLAlchemy 2.0 Async` 기반 비동기 연결 풀 관리 |
+| | **자동 마이그레이션** | `Alembic` 비동기 스크립트 기반 DB 스키마 버전 관리 |
+| | **페이징 헬퍼** | `Page`, `PageableParams` 표준 페이징 및 정렬 규격 제공 |
+| **프론트엔드 (Frontend)** | **사용자 채팅 포털** | SSE 실시간 스트리밍 대화창, 사고과정(Thinking) 터미널 콘솔, Human-in-the-loop 승인 카드 |
+| | **관리자 콘솔 포털** | 사용자 목록 조회(페이징/검색/필터), 신규 등록, 계정 잠금 해제, 임시 비밀번호 발급 |
+| | **멀티 엔트리포인트** | 1개 Vite 프로젝트에서 `/index.html`(사용자)과 `/admin.html`(관리자) 독립 번들링 서빙 |
+
+---
+
 ## 🏛️ AgentForge 프레임워크 저장소 구조
 
 AgentForge 프레임워크 자체의 코드베이스는 표준 Python 패키지 레이아웃을 따르며, CLI 도구, 프로젝트 스캐폴딩 엔진, 모듈형 템플릿, 그리고 생성 프로젝트로 복사될 표준 Core 엔진 원본으로 구성됩니다.
@@ -156,24 +177,43 @@ AgentForge/
 │   │   └── validator.py           # 사용자 입력 파라미터 및 경로 검증기
 │   │
 │   ├── core/                      # 생성 프로젝트(backend/src/core/)로 복사될 독립 런타임 원본
-│   │   ├── adapter.py             # 표준 BaseAgentAdapter 인터페이스
+│   │   ├── adapter.py             # 표준 BaseAgentAdapter 인터페이스 & AgentChunk 규격
 │   │   ├── config.py              # Pydantic Settings 환경 설정 베이스
-│   │   ├── logging.py             # 구조화 로깅 엔진
+│   │   ├── database.py            # SQLModel/SQLAlchemy 커넥터 & 페이징 헬퍼
+│   │   ├── logging.py             # 구조화 JSON 로깅 엔진
 │   │   └── streaming.py           # 실시간 SSE 스트리머 & 동시성 세마포어
 │   │
 │   └── templates/                 # 모듈 조합형 프로젝트 템플릿 저장소
-│       ├── backend/               # FastAPI 백엔드 기본 뼈대
+│       ├── backend/               # FastAPI 백엔드 (Clean Architecture)
 │       │   ├── src/
-│       │   └── frameworks/        # 5대 프레임워크별 어댑터/에이전트 템플릿
-│       │       ├── langchain/     # LangChain 체인/에이전트 보일러플레이트
-│       │       ├── langgraph/     # LangGraph StateGraph 보일러플레이트
-│       │       ├── deepagent/     # DeepAgent 추론 에이전트 보일러플레이트
-│       │       ├── adk/           # ADK 도구 연동형 에이전트 보일러플레이트
-│       │       └── bedrock/       # AWS Bedrock Agent 보일러플레이트
+│       │   │   ├── domain/        # User, AuthSession, Chat 엔티티 & 포트
+│       │   │   ├── application/   # Auth, UserManagement, Chat 서비스 & DTO
+│       │   │   ├── infrastructure/# SQLModel, Native JWT, LDAP3, PySAML2, Redis, REST 라우터
+│       │   │   ├── frameworks/    # 5대 프레임워크별 어댑터/에이전트 템플릿
+│       │   │   ├── bootstrap.py   # Lifespan 및 앱 조립 Composition Root
+│       │   │   └── main.py        # 백엔드 웹 서버 진입점
+│       │   ├── alembic/           # 데이터베이스 마이그레이션 버전 관리
+│       │   ├── alembic.ini
+│       │   ├── pyproject.toml     # uv 기반 의존성 정의
+│       │   └── Dockerfile         # 멀티스테이지 컨테이너 빌드
 │       │
 │       ├── frontend/              # 프론트엔드 모듈 템플릿
-│       │   ├── react-vite/        # Vite + React + Tailwind CSS 모던 UI
-│       │   └── streamlit/         # Streamlit 빠른 프로토타이핑 대시보드
+│       │   └── react-vite/        # Vite + React 멀티 엔트리포인트 (사용자 채팅 + 관리자 포털)
+│       │       ├── src/
+│       │       │   ├── auth/      # AuthProvider, LoginForm (ID/PW, LDAP, SAML)
+│       │       │   ├── components/# ChatAssistant, TerminalConsole, InterruptApprovalCard
+│       │       │   ├── admin/     # AdminApp, AccountManagementPanel
+│       │       │   ├── App.jsx    # 사용자 채팅 포털 엔트리
+│       │       │   └── main.jsx
+│       │       ├── index.html     # 사용자 채팅 포털 HTML
+│       │       ├── admin.html     # 관리자 콘솔 포털 HTML
+│       │       ├── vite.config.js # 멀티 엔트리 번들러 설정
+│       │       ├── tailwind.config.js
+│       │       └── package.json
+│       │
+│       ├── infra/                 # 로컬 통합 인프라 템플릿
+│       │   ├── docker-compose.yml # PostgreSQL 16 + Redis 7 + Backend + Frontend
+│       │   └── postgres-init/     # DB 초기화 스크립트
 │       │
 │       └── k8s/                   # Kubernetes 실전 배포 매니페스트 템플릿
 │           ├── dev/               # 개발 환경 (Deployment, Service, ConfigMap)
@@ -181,9 +221,10 @@ AgentForge/
 │           └── k8s-deploy.sh      # 원클릭 배포 자동화 스크립트
 │
 ├── tests/                         # 프레임워크 자체 테스트 스위트
-│   ├── test_cli.py                # CLI 명령어 단위 테스트
-│   ├── test_generator.py          # 프로젝트 생성 및 Core 복사 무결성 검증
-│   └── test_templates.py          # 템플릿 구문 및 조합 빌드 테스트
+│   ├── test_core.py               # Core 런타임 단위 테스트 (36 passed)
+│   ├── test_generator.py          # 프로젝트 생성 및 Core 복사 무결성 검증 (5 passed)
+│   ├── test_cli.py                # CLI 명령어 단위 테스트 (4 passed)
+│   └── e2e/                       # 4-Tier E2E 통합 테스트 스위트 (98 passed)
 │
 ├── pyproject.toml                 # 패키지 빌드 메타데이터 및 CLI 스크립트 엔트리포인트 (`agentforge`, `af`)
 ├── LICENSE                        # MIT License
@@ -203,61 +244,45 @@ my-awesome-agent/
 │   │   ├── core/                  # 복사된 독립형 Standalone Core 엔진
 │   │   │   ├── adapter.py         # 표준 BaseAgentAdapter 인터페이스
 │   │   │   ├── config.py          # Pydantic Settings 환경 설정
+│   │   │   ├── database.py        # SQLModel/SQLAlchemy 커넥터 & 세션/페이징
 │   │   │   ├── logging.py         # 구조화 로깅
 │   │   │   └── streaming.py       # 실시간 SSE 스트리머 & 동시성 세마포어
-│   │   ├── domain/                # 비즈니스 도메인 모델, Entity, 인터페이스 규격
-│   │   ├── application/           # 에이전트 서비스, 유스케이스 오케스트레이션, DTO
-│   │   ├── infrastructure/        # 선택된 에이전트 프레임워크(LangGraph/Bedrock 등) 연동, 외부 API
-│   │   ├── common/                # 공통 에러 핸들링, 미들웨어, 유틸 상수
-│   │   ├── utils/                 # 도구 커넥터 및 헬퍼 유틸리티
+│   │   ├── domain/                # 사용자(User), 세션(AuthSession), 대화(Chat) 엔티티 및 포트
+│   │   ├── application/           # 인증 서비스, 사용자 관리 서비스, 대화 서비스 및 DTO
+│   │   ├── infrastructure/        # SQLModel 테이블, Native JWT, LDAP3, PySAML2, Redis, REST 라우터
 │   │   ├── main.py                # FastAPI 웹 애플리케이션 진입점
-│   │   └── bootstrap.py           # 서비스 컨테이너 초기화 및 런타임 바인딩
+│   │   └── bootstrap.py           # Core + Auth 중첩 Lifespan 및 앱 조립 Root
 │   ├── alembic/                   # 데이터베이스 마이그레이션 버전 관리
 │   ├── alembic.ini
-│   ├── tests/                     # 백엔드 단위/통합 테스트 스위트
 │   ├── Dockerfile                 # 백엔드 프로덕션 멀티스테이지 Dockerfile
-│   ├── pyproject.toml             # uv / pyproject 기반 의존성 정의
-│   └── uv.lock                    # 초고속 uv 패키지 락파일
+│   └── pyproject.toml             # uv / pyproject 기반 의존성 정의
 │
-├── frontend/                      # Vite + React 기반 모던 웹 프론트엔드 (Streamlit 선택 가능)
-│   ├── src/                       # 프론트엔드 React 소스
-│   │   ├── api/                   # 백엔드 (/invoke, /stream SSE) 통신 API 클라이언트
-│   │   ├── components/            # 채팅 인터페이스, 메시지 카드, 상태 뱃지 등 UI 컴포넌트
-│   │   ├── pages/                 # 메인 화면 및 에이전트 대시보드 뷰
-│   │   ├── hooks/                 # 실시간 스트리밍 훅 및 상태 관리 훅
-│   │   ├── store/                 # 전역 상태 관리 (Zustand 등)
-│   │   ├── utils/                 # 공통 도우미 함수
-│   │   ├── App.jsx
+├── frontend/                      # Vite + React 멀티 엔트리포인트 포털
+│   ├── src/
+│   │   ├── api/                   # 백엔드 통신 API 클라이언트
+│   │   ├── auth/                  # AuthProvider, LoginForm(ID/PW, LDAP, SAML), useAuth
+│   │   ├── components/
+│   │   │   ├── chat/              # ChatAssistant, TerminalConsole, InterruptApprovalCard
+│   │   │   └── settings/          # AccountManagementPanel (사용자 CRUD, 잠금해제, 비밀번호 초기화)
+│   │   ├── admin/                 # AdminApp, useAdminRoute (관리자 전용 콘솔)
+│   │   ├── App.jsx                # 사용자 채팅 포털 메인 앱
 │   │   └── main.jsx
-│   ├── docker/                    # 프론트엔드 컨테이너 빌드 & Nginx 웹서버 설정
-│   │   ├── Dockerfile             # Vite 빌드 결과물 서빙 경량 Nginx 컨테이너
-│   │   ├── default.conf           # SPA 라우팅 대응 Nginx 설정
-│   │   └── nginx-security.conf    # 보안 헤더 설정
+│   ├── index.html                 # 사용자 포털 엔트리 (/index.html)
+│   ├── admin.html                 # 관리자 포털 엔트리 (/admin.html)
+│   ├── docker/                    # Nginx 웹서버 설정 및 경량 배포 Dockerfile
 │   ├── package.json
-│   ├── vite.config.js             # Vite 번들러 설정
+│   ├── vite.config.js             # Vite 멀티 엔트리 번들러 설정
 │   └── tailwind.config.js         # Tailwind CSS 스타일링 설정
 │
 ├── k8s/                           # 환경 분리형 Kubernetes 실전 배포 매니페스트
-│   ├── dev/                       # 개발(Dev) 환경 매니페스트
-│   │   ├── backend/               # 백엔드 Deployment & Service
-│   │   ├── frontend/              # 프론트엔드 Deployment & Service
-│   │   ├── configmap.yaml         # 개발 환경 변수 ConfigMap
-│   │   ├── secret-external.yaml   # API Key 등 시크릿 템플릿
-│   │   ├── namespace.yaml
-│   │   └── serviceaccount.yaml
-│   ├── prd/                       # 운영(Prod) 환경 매니페스트 (고가용성 & 리소스 튜닝)
-│   │   ├── backend/
-│   │   ├── frontend/
-│   │   ├── configmap.yaml
-│   │   ├── secret-external.yaml
-│   │   ├── namespace.yaml
-│   │   └── serviceaccount.yaml
+│   ├── dev/                       # 개발(Dev) 환경 매니페스트 (Backend, Frontend, ConfigMap)
+│   ├── prd/                       # 운영(Prod) 환경 매니페스트 (HA 고가용성 & 리소스 튜닝)
 │   └── k8s-deploy.sh              # 환경별 원클릭 클러스터 배포 쉘 스크립트
 │
-├── docs/                          # 프로젝트 아키텍처, API 스펙, 개발 가이드 문서
-├── docker-compose.yml             # 로컬 통합 개발 환경 원클릭 실행 (Frontend + Backend)
-├── .env.sample                    # 환경 변수 샘플 파일
+├── docker-compose.yml             # 로컬 통합 개발 환경 원클릭 실행 (Postgres 16 + Redis 7 + Backend + Frontend)
+├── postgres-init/                 # PostgreSQL 초기화 스크립트
 └── README.md                      # 프로젝트 전용 안내 문서
+```
 
 ---
 
