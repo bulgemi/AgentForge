@@ -464,6 +464,46 @@ agentforge deploy --namespace ai-agents
 
 ---
 
+## 📦 사용 Python 패키지 및 버전 정보 (Dependencies)
+
+AgentForge 프레임워크와 생성되는 백엔드 프로젝트는 **Python 3.12 이상** 환경에서 구동되며, 검증된 고성능 최신 라이브러리 생태계를 표준으로 채택하고 있습니다.
+
+### 1) 프레임워크 핵심 런타임 패키지 (`dependencies`)
+
+| 분류 | 패키지명 | 최소 버전 | 라이선스 | 주요 용도 및 채택 이유 |
+| :--- | :--- | :--- | :--- | :--- |
+| **CLI & 터미널 UX** | [`typer`](https://github.com/fastapi/typer) | `>=0.9.0` | MIT | Python 타입 힌트 기반의 글로벌 CLI 명령어 구현 (`agentforge`, `af`) |
+| | [`rich`](https://github.com/Textualize/rich) | `>=13.0.0` | MIT | 터미널 컬러 패널, 상태 프로그레스, 서식화된 로그 출력 |
+| **데이터 모델 & 설정** | [`pydantic`](https://github.com/pydantic/pydantic) | `>=2.0.0` | MIT | Rust 코어(V2) 기반의 강력한 데이터 유효성 검증 및 직렬화 |
+| | [`pydantic-settings`](https://github.com/pydantic/pydantic-settings) | `>=2.0.0` | MIT | 환경 변수(`.env`) 자동 바인딩 및 계층형 설정(`BaseAppSettings`) 관리 |
+| **데이터베이스 & ORM** | [`sqlmodel`](https://github.com/fastapi/sqlmodel) | `>=0.0.14` | MIT | Pydantic과 SQLAlchemy 2.0을 결합한 비동기 데이터베이스 ORM |
+| | [`sqlalchemy`](https://github.com/sqlalchemy/sqlalchemy) | `>=2.0.0` | MIT | 엔터프라이즈 RDBMS 비동기 커넥션 풀 및 코어 쿼리 실행 엔진 |
+| | [`alembic`](https://github.com/sqlalchemy/alembic) | `>=1.12.0` | MIT | 비동기 DB 스키마 마이그레이션 버전 관리 및 자동 추적 |
+| **웹 API & 스트리밍** | [`fastapi`](https://github.com/fastapi/fastapi) | `>=0.100.0` | MIT | 고성능 비동기 REST API 및 SSE(Server-Sent Events) 실시간 토큰 스트리밍 |
+| | [`uvicorn`](https://github.com/encode/uvicorn) | `>=0.22.0` | BSD-3 | 고속 비동기 ASGI 웹 서버 |
+| **인증 & 세션 보안** | [`redis`](https://github.com/redis/redis-py) | `>=5.0.0` | MIT | Redis 7+ 연동 분산 세션 관리, 토큰 블랙리스트, 요청 제한(Rate Limiter) |
+| | [`pyjwt`](https://github.com/jpadilla/pyjwt) | `>=2.8.0` | MIT | Native JWT(Access/Refresh Token) 암호화 서명 및 유효성 검증 |
+| | [`passlib`](https://foss.heptapod.net/python-libs/passlib) | `>=1.7.4` | BSD | 비밀번호 솔팅 및 안전한 해싱 인터페이스 추상화 |
+| | [`argon2-cffi`](https://github.com/hynek/argon2-cffi) | `>=23.1.0` | MIT | 메모리 하드(Memory-Hard) 차세대 Argon2id 해싱 알고리즘 |
+| **환경 설정 유틸** | [`python-dotenv`](https://github.com/theskumar/python-dotenv) | `>=1.0.0` | BSD-3 | 로컬 `.env` 환경 변수 자동 파싱 및 주입 |
+
+### 2) 개발 및 테스트 의존성 (`optional-dependencies.dev`)
+
+| 패키지명 | 최소 버전 | 라이선스 | 주요 용도 |
+| :--- | :--- | :--- | :--- |
+| [`pytest`](https://github.com/pytest-dev/pytest) | `>=8.0.0` | MIT | 단위 / E2E 통합 테스트 러너 및 Assertion 프레임워크 |
+| [`pytest-asyncio`](https://github.com/pytest-dev/pytest-asyncio) | `>=0.23.0` | Apache-2.0 | 비동기 코루틴(`async def`) 및 이벤트 루프 테스트 지원 |
+| [`pytest-mock`](https://github.com/pytest-dev/pytest-mock) | `>=3.12.0` | MIT | 외부 시스템(LDAP, Redis, SMTP 등) 모킹(Mock) 유틸리티 |
+| [`httpx`](https://github.com/encode/httpx) | `>=0.27.0` | BSD-3 | FastAPI 비동기 통합 테스트 클라이언트 (`httpx.AsyncClient`) |
+
+### 3) 템플릿 백엔드 추가 의존성 (`agentforge/templates/backend/`)
+
+| 패키지명 | 최소 버전 | 라이선스 | 주요 용도 |
+| :--- | :--- | :--- | :--- |
+| [`asyncpg`](https://github.com/MagicStack/asyncpg) | `>=0.28.0` | Apache-2.0 | PostgreSQL 16 고성능 네이티브 비동기 DB 드라이버 |
+
+---
+
 ## 🛠️ 개발 및 기여 가이드 (Contributing)
 
 AgentForge는 오픈소스 프로젝트로서 커뮤니티의 기여를 적극 환영합니다.
