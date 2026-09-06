@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any, Mapping
@@ -21,6 +22,16 @@ PACKAGE_TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 PACKAGE_ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 
 
+def to_snake_case(name: str) -> str:
+    """Convert PascalCase, camelCase, or kebab-case string into lowercase snake_case."""
+    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', name)
+    s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
+    s = s.replace("-", "_")
+    s = re.sub(r'_+', '_', s)
+    result = s.strip("_").lower()
+    return result or "agentforge_app"
+
+
 class ScaffoldingEngine:
     """Orchestrates creation of fullstack standalone agent projects."""
 
@@ -31,10 +42,9 @@ class ScaffoldingEngine:
         """Simple, fast token replacement without requiring heavy template runtime."""
         rendered = text
         for key, value in context.items():
-            token_bracket = "{{" + f" {key} " + "}}"
-            token_compact = "{{" + f"{key}" + "}}"
-            rendered = rendered.replace(token_bracket, str(value))
-            rendered = rendered.replace(token_compact, str(value))
+            # Support {{ key }}, {{key}}, {{  key  }} with arbitrary internal whitespace
+            pattern = re.compile(r"\{\{\s*" + re.escape(key) + r"\s*\}\}")
+            rendered = pattern.sub(str(value), rendered)
         return rendered
 
     def copy_template_tree(
@@ -63,11 +73,14 @@ class ScaffoldingEngine:
             ".html",
             ".css",
             ".sh",
+            ".bat",
+            ".cmd",
             ".env",
             ".sample",
             ".ini",
             ".conf",
             ".txt",
+            ".sql",
         )
 
         for root, dirs, files in os.walk(source_dir):
@@ -90,8 +103,8 @@ class ScaffoldingEngine:
                         rendered = self.render_content(content, context)
                         dest_file.write_text(rendered, encoding="utf-8")
                         # Preserve executable permissions for scripts
-                        if src_file.stat().st_mode & 0o111:
-                            dest_file.chmod(dest_file.stat().st_mode | 0o111)
+                        if (src_file.stat().st_mode & 0o111) or file_name.endswith(".sh"):
+                            dest_file.chmod(dest_file.stat().st_mode | 0o755)
                         continue
                     except UnicodeDecodeError:
                         pass
@@ -127,7 +140,7 @@ class ScaffoldingEngine:
 
         context = {
             "project_name": clean_name,
-            "project_name_snake": clean_name.replace("-", "_"),
+            "project_name_snake": to_snake_case(clean_name),
             "framework": clean_framework,
             "frontend": clean_frontend,
             "python_version": "3.12",
@@ -210,12 +223,14 @@ Standalone AI Agent Project built with [AgentForge](https://github.com/bulgemi/A
 - **Frontend**: {clean_frontend}
 - **Architecture**: Fullstack Clean Architecture Monorepo
 - **Authentication**: ID/PW, LDAP, SAML 2.0
-- **Database**: PostgreSQL 16 + Redis 7
+- **Database & Cache**: PostgreSQL 16 + Redis 7.4
+- **Observability**: Langfuse v3 (ClickHouse + MinIO + Web + Worker)
+- **Search & Vectors**: OpenSearch 2.19.3 + OpenSearch Dashboards
 
 ## Quick Start
 
 ### 1. One-Click Local Run (Recommended)
-Automatically sets up virtual environment, installs dependencies, and runs dev servers.
+Automatically sets up virtual environment, launches Docker infrastructure (Postgres, Redis, Langfuse, OpenSearch), and runs dev servers.
 
 ```bash
 # macOS / Linux
@@ -227,15 +242,33 @@ run.bat
 
 > **Tip**: To install dependencies only without starting servers, run `./setup.sh` or `setup.bat`.
 
-### 2. Run with Docker Compose
-```bash
-docker-compose up -d
-```
-- Frontend (Chat): http://localhost:5173
-- Frontend (Admin): http://localhost:5173/admin/
-- Backend API Docs: http://localhost:8000/docs
+### 2. Manage Infrastructure with Docker Compose
 
-### 3. Manual Run Locally
+Start specific stacks using Docker Compose profiles:
+
+```bash
+# 1. Start all infrastructure (PostgreSQL, Redis, Langfuse v3, OpenSearch)
+docker compose --profile infra up -d
+
+# 2. Start observability stack only (Langfuse Web, Worker, ClickHouse, MinIO)
+docker compose --profile observability up -d
+
+# 3. Start search stack only (OpenSearch, Init, Dashboards)
+docker compose --profile search up -d
+
+# 4. Start all services including Backend & Frontend containers
+docker compose --profile all up -d
+```
+
+### 3. Service Dashboard & URLs
+- **Frontend (Chat)**: http://localhost:5173
+- **Frontend (Admin)**: http://localhost:5173/admin.html
+- **Backend API Docs**: http://localhost:8000/docs
+- **Langfuse Observability**: http://localhost:3000
+- **OpenSearch Dashboards**: http://localhost:5601
+- **OpenSearch API**: http://localhost:9200
+
+### 4. Manual Run Locally
 ```bash
 # Backend
 cd backend

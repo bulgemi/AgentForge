@@ -1,0 +1,34 @@
+{
+  "index_patterns": ["{{ project_name_snake }}-*"],
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0,
+        "knn": true
+      }
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "trace_id": { "type": "keyword" },
+        "session_id": { "type": "keyword" },
+        "user_id": { "type": "keyword" },
+        "action": { "type": "keyword" },
+        "status": { "type": "keyword" },
+        "query": { "type": "text" },
+        "response": { "type": "text" },
+        "metadata": { "type": "object", "dynamic": true },
+        "embedding": {
+          "type": "knn_vector",
+          "dimension": 1536,
+          "method": {
+            "name": "hnsw",
+            "space_type": "cosinesimil",
+            "engine": "faiss"
+          }
+        }
+      }
+    }
+  }
+}

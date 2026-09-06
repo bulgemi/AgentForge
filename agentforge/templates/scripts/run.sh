@@ -39,6 +39,22 @@ if [ "$NEEDS_SETUP" = true ]; then
     echo ""
 fi
 
+# 1.1 Start Docker Compose infrastructure if Docker daemon is running
+if command -v docker >/dev/null 2>&1; then
+    if docker info >/dev/null 2>&1; then
+        if [ -f "docker-compose.yml" ]; then
+            echo -e "${CYAN}🐳 Starting local infrastructure (PostgreSQL, Redis, Langfuse, OpenSearch)...${NC}"
+            docker compose --profile infra up -d || true
+            echo ""
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Docker is installed but the Docker daemon is not running.${NC}"
+        echo -e "${YELLOW}   Skipping infrastructure startup. Start Docker Desktop to use local Postgres, Redis, Langfuse, and OpenSearch.${NC}\n"
+    fi
+else
+    echo -e "${YELLOW}⚠️  Docker is not installed. Skipping infrastructure startup.${NC}\n"
+fi
+
 # Trap cleanup to terminate child processes on exit/interrupt
 BACKEND_PID=""
 FRONTEND_PID=""
@@ -98,6 +114,8 @@ if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
 elif [ -d "frontend" ] && [ -f "frontend/app.py" ]; then
     echo -e "• ${BOLD}Streamlit UI${NC}:     ${CYAN}http://localhost:8501/${NC}"
 fi
+echo -e "• ${BOLD}Langfuse UI${NC}:      ${CYAN}http://localhost:3000${NC}"
+echo -e "• ${BOLD}OpenSearch GUI${NC}:   ${CYAN}http://localhost:5601${NC}"
 echo -e "=========================================================="
 echo -e "${YELLOW}Press Ctrl+C to stop all servers.${NC}\n"
 
