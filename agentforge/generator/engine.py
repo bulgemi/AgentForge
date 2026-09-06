@@ -194,6 +194,12 @@ class ScaffoldingEngine:
         copy_core_engine(dest_backend_src, overwrite=True)
 
         # 6. Generate project README.md and root files
+        gitignore_tpl = self.templates_dir / "root" / ".gitignore"
+        dest_gitignore = dest_root / ".gitignore"
+        if gitignore_tpl.exists() and not dest_gitignore.exists():
+            gi_content = gitignore_tpl.read_text(encoding="utf-8")
+            dest_gitignore.write_text(self.render_content(gi_content, context), encoding="utf-8")
+
         readme_path = dest_root / "README.md"
         if not readme_path.exists():
             readme_content = f"""# {clean_name} ⚡

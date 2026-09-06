@@ -20,8 +20,14 @@ set "NEEDS_SETUP=0"
 if not exist "backend\.venv" (
     set "NEEDS_SETUP=1"
 )
+if not exist "backend\.env" (
+    set "NEEDS_SETUP=1"
+)
 if exist "frontend\package.json" (
     if not exist "frontend\node_modules" (
+        set "NEEDS_SETUP=1"
+    )
+    if not exist "frontend\.env" (
         set "NEEDS_SETUP=1"
     )
 )

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Terminal as TerminalIcon } from 'lucide-react';
 import { InterruptApprovalCard } from './InterruptApprovalCard';
 import { TerminalConsole } from './TerminalConsole';
+import { API_BASE } from '../../api/client';
 
 export function ChatAssistant({ chatId = 'default-chat' }) {
   const [messages, setMessages] = useState([]);
@@ -34,7 +35,7 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
 
     const token = localStorage.getItem('access_token');
     try {
-      const response = await fetch(`/api/v1/chats/${chatId}/stream`, {
+      const response = await fetch(`${API_BASE}/chats/${chatId}/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
 
   const handleResolveInterrupt = async (interruptId, decision) => {
     const token = localStorage.getItem('access_token');
-    await fetch(`/api/v1/chats/${chatId}/interrupts/${interruptId}/resolve`, {
+    await fetch(`${API_BASE}/chats/${chatId}/interrupts/${interruptId}/resolve`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

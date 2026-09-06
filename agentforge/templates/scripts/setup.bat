@@ -19,6 +19,13 @@ cd /d "%ROOT_DIR%"
 echo [1/2] Setting up Backend...
 cd /d "%ROOT_DIR%backend"
 
+if not exist ".env" (
+    if exist ".env.sample" (
+        echo [OK] Initializing backend/.env from .env.sample
+        copy /y ".env.sample" ".env" >nul
+    )
+)
+
 set "PYTHON_CMD="
 py -3 --version >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
@@ -68,6 +75,12 @@ cd /d "%ROOT_DIR%"
 if exist "frontend\package.json" (
     echo [2/2] Setting up Frontend...
     cd /d "%ROOT_DIR%frontend"
+    if not exist ".env" (
+        if exist ".env.sample" (
+            echo [OK] Initializing frontend\.env from .env.sample
+            copy /y ".env.sample" ".env" >nul
+        )
+    )
     where npm >nul 2>&1
     if %ERRORLEVEL% NEQ 0 (
         echo [WARNING] npm is not installed. Please install Node.js to use frontend.

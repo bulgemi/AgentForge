@@ -184,7 +184,12 @@ AgentForge/
 │   │   └── streaming.py           # 실시간 SSE 스트리머 & 동시성 세마포어
 │   │
 │   └── templates/                 # 모듈 조합형 프로젝트 템플릿 저장소
+│       ├── root/                  # 프로젝트 루트 템플릿
+│       │   └── .gitignore         # 프로젝트 루트 gitignore (.env 제외, .env.sample 허용)
+│       │
 │       ├── backend/               # FastAPI 백엔드 (Clean Architecture)
+│       │   ├── .env               # 로컬 즉시 실행용 백엔드 환경 변수 템플릿
+│       │   ├── .env.sample        # 백엔드 전체 환경 변수 가이드 및 참조 템플릿
 │       │   ├── src/
 │       │   │   ├── domain/        # User, AuthSession, Chat 엔티티 & 포트
 │       │   │   ├── application/   # Auth, UserManagement, Chat 서비스 & DTO
@@ -199,7 +204,10 @@ AgentForge/
 │       │
 │       ├── frontend/              # 프론트엔드 모듈 템플릿
 │       │   └── react-vite/        # Vite + React 멀티 엔트리포인트 (사용자 채팅 + 관리자 포털)
+│       │       ├── .env           # 로컬 즉시 실행용 프론트엔드 환경 변수 템플릿
+│       │       ├── .env.sample    # 프론트엔드 환경 변수 가이드 및 참조 템플릿
 │       │       ├── src/
+│       │       │   ├── api/       # 백엔드 통신 API 클라이언트 (VITE_API_BASE_URL)
 │       │       │   ├── auth/      # AuthProvider, LoginForm (ID/PW, LDAP, SAML)
 │       │       │   ├── components/# ChatAssistant, TerminalConsole, InterruptApprovalCard
 │       │       │   ├── admin/     # AdminApp, AccountManagementPanel
@@ -207,18 +215,18 @@ AgentForge/
 │       │       │   └── main.jsx
 │       │       ├── index.html     # 사용자 채팅 포털 HTML
 │       │       ├── admin.html     # 관리자 콘솔 포털 HTML
-│       │       ├── vite.config.js # 멀티 엔트리 번들러 설정
+│       │       ├── vite.config.js # 멀티 엔트리 번들러 설정 (VITE_DEV_PROXY_TARGET)
 │       │       ├── tailwind.config.js
 │       │       └── package.json
 │       │
 │       ├── scripts/               # 생성 프로젝트용 원클릭 개발/설치 스크립트 템플릿
-│       │   ├── run.sh             # macOS/Linux 원클릭 설치 및 동시 실행 스크립트
-│       │   ├── run.bat            # Windows 원클릭 설치 및 동시 실행 스크립트
-│       │   ├── setup.sh           # macOS/Linux 의존성 환경 구축 스크립트
-│       │   └── setup.bat          # Windows 의존성 환경 구축 스크립트
+│       │   ├── run.sh             # macOS/Linux 원클릭 설치 및 동시 실행 스크립트 (.env 자동 초기화)
+│       │   ├── run.bat            # Windows 원클릭 설치 및 동시 실행 스크립트 (.env 자동 초기화)
+│       │   ├── setup.sh           # macOS/Linux 의존성 환경 구축 스크립트 (.env 자동 초기화)
+│       │   └── setup.bat          # Windows 의존성 환경 구축 스크립트 (.env 자동 초기화)
 │       │
 │       ├── infra/                 # 로컬 통합 인프라 템플릿
-│       │   ├── docker-compose.yml # PostgreSQL 16 + Redis 7 + Backend + Frontend
+│       │   ├── docker-compose.yml # PostgreSQL 16 + Redis 7 + Backend(env_file 연동) + Frontend
 │       │   └── postgres-init/     # DB 초기화 스크립트
 │       │
 │       └── k8s/                   # Kubernetes 실전 배포 매니페스트 템플릿
@@ -247,15 +255,18 @@ AgentForge/
 
 ```text
 my-awesome-agent/
-├── run.sh                         # macOS/Linux 원클릭 의존성 설치 & 서버 동시 실행
-├── run.bat                        # Windows 원클릭 의존성 설치 & 서버 동시 실행
-├── setup.sh                       # macOS/Linux 의존성 사전 구성 스크립트
-├── setup.bat                      # Windows 의존성 사전 구성 스크립트
+├── .gitignore                     # Git 제외 설정 (backend/.env, frontend/.env 제외, *.env.sample 커밋)
+├── run.sh                         # macOS/Linux 원클릭 의존성 설치 & 서버 동시 실행 (.env 자동 초기화)
+├── run.bat                        # Windows 원클릭 의존성 설치 & 서버 동시 실행 (.env 자동 초기화)
+├── setup.sh                       # macOS/Linux 의존성 사전 구성 스크립트 (.env 자동 초기화)
+├── setup.bat                      # Windows 의존성 사전 구성 스크립트 (.env 자동 초기화)
 ├── backend/                       # FastAPI 기반 백엔드 (Clean Architecture 계층 구조)
+│   ├── .env                       # 백엔드 활성 로컬 환경 변수 (스캐폴딩 시 기본값 자동 치환)
+│   ├── .env.sample                # 백엔드 전체 환경 변수 가이드 및 참조 템플릿
 │   ├── src/                       # 백엔드 핵심 소스
 │   │   ├── core/                  # 복사된 독립형 Standalone Core 엔진
 │   │   │   ├── adapter.py         # 표준 BaseAgentAdapter 인터페이스
-│   │   │   ├── config.py          # Pydantic Settings 환경 설정
+│   │   │   ├── config.py          # Pydantic Settings 환경 설정 (BaseAppSettings)
 │   │   │   ├── database.py        # SQLModel/SQLAlchemy 커넥터 & 세션/페이징
 │   │   │   ├── logging.py         # 구조화 로깅
 │   │   │   └── streaming.py       # 실시간 SSE 스트리머 & 동시성 세마포어
@@ -270,8 +281,10 @@ my-awesome-agent/
 │   └── pyproject.toml             # uv / pyproject 기반 의존성 정의
 │
 ├── frontend/                      # Vite + React 멀티 엔트리포인트 포털
+│   ├── .env                       # 프론트엔드 활성 로컬 환경 변수 (VITE_* 기본값 자동 치환)
+│   ├── .env.sample                # 프론트엔드 환경 변수 가이드 및 참조 템플릿
 │   ├── src/
-│   │   ├── api/                   # 백엔드 통신 API 클라이언트
+│   │   ├── api/                   # 백엔드 통신 API 클라이언트 (VITE_API_BASE_URL)
 │   │   ├── auth/                  # AuthProvider, LoginForm(ID/PW, LDAP, SAML), useAuth
 │   │   ├── components/
 │   │   │   ├── chat/              # ChatAssistant, TerminalConsole, InterruptApprovalCard
@@ -283,7 +296,7 @@ my-awesome-agent/
 │   ├── admin.html                 # 관리자 포털 엔트리 (/admin.html)
 │   ├── docker/                    # Nginx 웹서버 설정 및 경량 배포 Dockerfile
 │   ├── package.json
-│   ├── vite.config.js             # Vite 멀티 엔트리 번들러 설정
+│   ├── vite.config.js             # Vite 멀티 엔트리 번들러 설정 (VITE_DEV_PROXY_TARGET)
 │   └── tailwind.config.js         # Tailwind CSS 스타일링 설정
 │
 ├── k8s/                           # 환경 분리형 Kubernetes 실전 배포 매니페스트
@@ -291,10 +304,61 @@ my-awesome-agent/
 │   ├── prd/                       # 운영(Prod) 환경 매니페스트 (HA 고가용성 & 리소스 튜닝)
 │   └── k8s-deploy.sh              # 환경별 원클릭 클러스터 배포 쉘 스크립트
 │
-├── docker-compose.yml             # 로컬 통합 개발 환경 원클릭 실행 (Postgres 16 + Redis 7 + Backend + Frontend)
+├── docker-compose.yml             # 로컬 통합 개발 환경 원클릭 실행 (Postgres 16 + Redis 7 + Backend(env_file 연동) + Frontend)
 ├── postgres-init/                 # PostgreSQL 초기화 스크립트
 └── README.md                      # 프로젝트 전용 안내 문서
 ```
+
+---
+
+## 🌱 환경 변수 관리 (.env & .env.sample)
+
+AgentForge로 생성되는 모든 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 환경 변수 관리 체계를 계승하여, **Backend**와 **Frontend** 각각에 `.env`와 `.env.sample`을 기본 제공합니다.
+
+### 1. 백엔드 환경 변수 (`backend/.env` & `backend/.env.sample`)
+
+백엔드는 `pydantic-settings`의 [`BaseAppSettings`](agentforge/core/config.py) 및 `AuthConfig`를 통해 환경 변수를 자동 로딩합니다.
+
+| 카테고리 | 주요 환경 변수 | 기본값 (스캐폴딩 시) | 설명 |
+| :--- | :--- | :--- | :--- |
+| **프로젝트 기본** | `PROJECT_NAME` | `{{ project_name }}` | 애플리케이션 및 서비스 식별자 |
+| | `ENVIRONMENT` | `dev` | 런타임 환경 (`dev`, `prd`, `test`) |
+| | `HOST` / `PORT` | `0.0.0.0` / `8000` | 서버 바인딩 호스트 및 포트 |
+| **LLM 공급자** | `LLM_PROVIDER` | `openai` (또는 지정 fw) | 기본 공급자 (`openai`, `gemini`, `anthropic`, `bedrock`) |
+| | `OPENAI_API_KEY` / `OPENAI_MODEL_NAME` | `gpt-4o` | OpenAI API 키 및 모델명 |
+| | `GOOGLE_API_KEY` / `GEMINI_MODEL_NAME` | `gemini-2.5-pro` | Google Gemini API 키 및 모델명 |
+| | `ANTHROPIC_API_KEY` / `CLAUDE_MODEL_NAME` | `claude-3-5-sonnet-20240620` | Anthropic Claude API 키 및 모델명 |
+| | `BEDROCK_MODEL_ID` / `AWS_REGION` | `ap-northeast-2` | AWS Bedrock 추론 모델 ID 및 리전 |
+| **데이터베이스** | `DATABASE_URL` | `postgresql+asyncpg://...` | 전체 DB 접속 URL |
+| | `DATABASE_DBNAME` | `{{ project_name_snake }}` | 데이터베이스명 |
+| | `DATABASE_AUTO_MIGRATE` | `true` | 기동 시 스키마 자동 초기화 및 마이그레이션 적용 여부 |
+| **캐시 & 세션** | `REDIS_URL` | `redis://localhost:6379/0` | 분산 세션 및 토큰 블랙리스트 Redis URL |
+| **보안 & 인증** | `JWT_SECRET_KEY` | `{{ project_name }}-secret-key-...` | 토큰 서명용 시크릿 키 (운영 시 32자 이상 필수) |
+| | `JWT_ALGORITHM` | `HS256` | JWT 서명 알고리즘 |
+| | `CORS_ORIGINS` | `["http://localhost:5173", ...]` | 허용 CORS 오리진 목록 |
+| | `LDAP_ENABLED` / `SAML_ENABLED` | `false` | 사내 계정 연동 및 SAML SSO 활성화 토글 |
+| **MCP & Tracing** | `AX_MCP_SERVER_URL` / `AX_MCP_SERVER_NAME` | `http://127.0.0.1:8080/mcp` | Model Context Protocol 도구 서버 연동 |
+| | `LANGFUSE_ENABLED` / `LANGFUSE_BASE_URL` | `false` / `http://localhost:3000` | Langfuse LLM 관측성(Observability) 및 추적 토글 |
+
+### 2. 프론트엔드 환경 변수 (`frontend/.env` & `frontend/.env.sample`)
+
+프론트엔드(Vite + React)는 `import.meta.env`를 통해 브라우저 번들에 노출되는 `VITE_*` 변수를 사용합니다.
+
+| 환경 변수 | 기본값 (스캐폴딩 시) | 설명 |
+| :--- | :--- | :--- |
+| `VITE_APP_TITLE` | `{{ project_name }}` | 프론트엔드 앱 브랜딩 타이틀 |
+| `VITE_API_BASE_URL` | `/api/v1` | API 클라이언트 기본 경로 (Vite Same-Origin 프록시 또는 백엔드 직접 URL) |
+| `VITE_DEV_PROXY_TARGET` | `http://localhost:8000` | 로컬 개발 시 `/api` 요청을 백엔드로 포워딩하는 Vite 프록시 타깃 |
+| `VITE_ADMIN_URL` | `/admin.html` | 관리자 콘솔 SPA 엔트리포인트 경로 |
+
+> ⚠️ **프론트엔드 환경 변수 보안 주의사항**:  
+> Vite는 `VITE_` 접두사가 붙은 모든 변수를 클라이언트 번들에 인라인으로 삽입합니다. 따라서 API 시크릿 키나 민감 비밀번호는 절대로 `frontend/.env`에 작성하지 마십시오.
+
+### 3. 보안 거버넌스 및 자동화 연동
+
+- **`.gitignore` 자동 보호**: 스캐폴딩 시 프로젝트 루트에 `.gitignore`가 생성되어 `backend/.env`와 `frontend/.env`는 Git 커밋에서 자동 제외되며, 상세 주석이 담긴 `.env.sample` 파일만 버전 관리에 유지됩니다.
+- **원클릭 자동 복사 폴백**: 저장소를 새로 클론하여 `.env`가 없는 상태에서 `./run.sh`, `run.bat`, `./setup.sh`, `setup.bat`를 실행하면 `.env.sample`로부터 로컬 `.env`를 자동 복사하여 초기화합니다.
+- **Docker Compose 통합**: `docker-compose.yml` 내 백엔드 서비스가 `env_file: ./backend/.env`를 직접 참조하여 로컬 개발 환경변수를 컨테이너에 자동 주입합니다.
 
 ---
 

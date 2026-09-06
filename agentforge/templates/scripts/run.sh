@@ -24,11 +24,13 @@ echo -e "${NC}"
 
 # 1. Dependency check & auto-setup
 NEEDS_SETUP=false
-if [ ! -d "backend/.venv" ]; then
+if [ ! -d "backend/.venv" ] || [ ! -f "backend/.env" ]; then
     NEEDS_SETUP=true
 fi
-if [ -d "frontend" ] && [ -f "frontend/package.json" ] && [ ! -d "frontend/node_modules" ]; then
-    NEEDS_SETUP=true
+if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+    if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/.env" ]; then
+        NEEDS_SETUP=true
+    fi
 fi
 
 if [ "$NEEDS_SETUP" = true ]; then
