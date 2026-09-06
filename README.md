@@ -286,43 +286,118 @@ my-awesome-agent/
 
 ---
 
-## 🚀 빠른 시작 (Quick Start)
+## ⚙️ 스캐폴딩 생성기(Scaffolding Generator) 설치 및 사용 가이드
 
-### 1. AgentForge CLI 설치
+AgentForge Scaffolding Generator는 완전한 독립형(Standalone) 프로덕션 AI 에이전트 프로젝트를 수 초 만에 자동 합성하는 핵심 도구입니다. **글로벌 CLI (`agentforge`, `af`)** 및 **Python 프로그래밍 API (`ScaffoldingEngine`)**를 모두 제공합니다.
 
+---
+
+### 1. 설치 방법 (Installation)
+
+#### 방법 A. PyPI / uv를 통한 전역 CLI 설치
 ```bash
 # pip를 통한 설치
 pip install agentforge
 
-# 또는 uv / pipx를 통한 초고속 설치
+# 또는 uv / pipx를 통한 초고속 격리 설치 (권장)
 uv tool install agentforge
+# pipx install agentforge
 ```
 
-### 2. 새 프로젝트 생성 (`agentforge new`)
+#### 방법 B. GitHub 소스 클론 및 개발자 모드 설치
+최신 개발 버전 코드를 직접 사용하거나 기여하고자 할 때 로컬에서 설치합니다.
+```bash
+# 1. 저장소 클론
+git clone https://github.com/bulgemi/AgentForge.git
+cd AgentForge
 
-원하는 위치에 프로젝트 이름, 사용할 에이전트 프레임워크, 프론트엔드 유형을 지정하여 생성합니다.
+# 2. 로컬 편집 가능(editable) 패키지 설치
+pip install -e .
+
+# 또는 uv 가상환경에서 개발 의존성 포함 설치
+uv pip install -e ".[dev]"
+```
+
+> 💡 **단축 명령어 지원**: 설치가 완료되면 `agentforge`와 동일한 기능의 단축 명령어인 `af`를 자유롭게 사용할 수 있습니다.
+> ```bash
+> af --help
+> ```
+
+---
+
+### 2. CLI 스캐폴딩 사용법 (`agentforge new` / `af new`)
+
+터미널에서 명령어 한 줄로 원하는 에이전트 프레임워크와 프론트엔드 인터페이스 조합의 독립형 프로젝트를 생성합니다.
 
 ```bash
-# 기본 사용법
-agentforge new <프로젝트명> --framework <프레임워크> --frontend <프론트엔드> --path <경로>
-
-# 예시 1: LangGraph + React(Vite) 조합으로 현재 디렉토리에 생성
-agentforge new customer-agent --framework langgraph --frontend react --path .
-
-# 예시 2: AWS Bedrock + Streamlit 조합으로 특정 디렉토리에 생성
-agentforge new enterprise-bot --framework bedrock --frontend streamlit --path /data/projects
-
-# 대화형 모드 (옵션을 지정하지 않으면 인터랙티브 마법사 실행)
-agentforge init
+# 기본 구문
+agentforge new <프로젝트명> [OPTIONS]
+# 또는 단축형
+af new <프로젝트명> [OPTIONS]
 ```
 
-#### 옵션 플래그 상세
+#### 📌 옵션 플래그 상세
 
-| 옵션 | 단축형 | 설명 | 선택값 |
-| :--- | :--- | :--- | :--- |
-| `--framework` | `-f` | 에이전트 개발 프레임워크 | `langchain`, `langgraph`, `deepagent`, `adk`, `bedrock` |
-| `--frontend` | `-ui` | 프론트엔드 인터페이스 | `react` (Vite + Tailwind), `streamlit`, `none` (headless 백엔드) |
-| `--path` | `-p` | 프로젝트가 생성될 디렉토리 경로 | 기본값: 현재 작업 디렉토리 (`.`) |
+| 옵션 | 단축형 | 기본값 | 설명 | 선택 가능한 값 |
+| :--- | :--- | :--- | :--- | :--- |
+| `--framework` | `-f` | `langgraph` | 에이전트 개발 프레임워크 | `langgraph`, `langchain`, `deepagent`, `adk`, `bedrock` |
+| `--frontend` | `-ui` | `react` | 프론트엔드 사용자 인터페이스 | `react` (Vite SPA), `streamlit`, `none` (Headless 백엔드만 생성) |
+| `--path` | `-p` | `.` (현재 폴더) | 프로젝트가 생성될 상위 디렉토리 경로 | 임의의 로컬 디렉토리 경로 |
+| `--force` | | `False` | 동일 이름 디렉토리 존재 시 덮어쓰기 | 플래그 지정 시 활성화 |
+
+#### 🚀 실전 스캐폴딩 명령어 예시
+
+```bash
+# 예시 1: LangGraph + React 풀스택 모노레포 생성 (가장 권장되는 기본 조합)
+af new customer-agent --framework langgraph --frontend react --path .
+
+# 예시 2: AWS Bedrock + Streamlit 대시보드 조합으로 특정 디렉토리에 생성
+af new enterprise-bot -f bedrock -ui streamlit -p /data/projects
+
+# 예시 3: DeepAgent 심층추론 에이전트 + Headless API 백엔드만 생성 (프론트엔드 제외)
+af new reasoner-api -f deepagent -ui none
+
+# 예시 4: 기존 폴더가 있어도 강제로 덮어쓰며 재생성 (--force)
+af new demo-bot -f langchain -ui react --force
+```
+
+---
+
+### 3. Python 프로그래밍 API 사용법 (`ScaffoldingEngine`)
+
+Python 스크립트나 CI/CD 파이프라인 내부에서 프로그래밍 방식으로 프로젝트를 자동 생성할 수 있습니다.
+
+```python
+from pathlib import Path
+from agentforge.generator.engine import ScaffoldingEngine
+
+# 1. 스캐폴딩 엔진 초기화
+engine = ScaffoldingEngine()
+
+# 2. 프로젝트 자동 생성 실행
+project_path = engine.generate(
+    project_name="finance-ai-agent",
+    target_dir="./workspace",
+    framework="langgraph",      # langchain | langgraph | deepagent | adk | bedrock
+    frontend="react",           # react | streamlit | none
+    force=True,                 # 기존 대상 디렉토리 덮어쓰기 허용 여부
+)
+
+print(f"✓ 프로젝트 생성 완료: {project_path}")
+# 생성된 backend/src/core/ 내 독립 런타임 및 frontend/public/ 내 favicon/logo 자산 완비
+```
+
+---
+
+### 4. 스캐폴딩 엔진의 5단계 합성 메커니즘
+
+AgentForge 스캐폴딩 엔진은 단순 파일 복사가 아닌, 프로덕션 배포가 가능한 완전 무결한 상태의 프로젝트를 단계별로 조립합니다.
+
+1. **파라미터 및 대상 경로 유효성 검증 (`validator.py`)**: 프로젝트명 규칙, 프레임워크 지원 여부, 디렉토리 쓰기 권한 검증.
+2. **Clean Architecture 템플릿 합성 (`engine.py`)**: 백엔드 계층 구조(Domain, Application, Infrastructure), 프론트엔드 멀티 엔트리포인트, Docker Compose 및 K8s 매니페스트 렌더링.
+3. **브랜딩 및 정적 자산 자동 배포**: `assets/`의 공식 파비콘(`favicon.ico`)과 로고(`agentforge_icon.png`, `apple-touch-icon.png`)를 생성 프로젝트의 `frontend/public/`으로 복제하고 HTML/UI 컴포넌트 자동 연결.
+4. **Standalone Core 엔진 독립 복제 (`copier.py`)**: 프레임워크 중앙 저장소에 의존하지 않도록 `agentforge/core/` 런타임 코드를 `backend/src/core/`로 100% 독립 복사.
+5. **AST 구문 무결성 검증 (`validator.py`)**: 생성된 모든 Python 파일의 문법 컴파일(`compileall`)을 수행하고 맞춤형 `README.md` 자동 생성.
 
 ---
 
@@ -364,7 +439,7 @@ git clone https://github.com/bulgemi/AgentForge.git
 cd AgentForge
 
 # 2. 개발 환경 설정
-poetry install  # 또는 pip install -e ".[dev]"
+pip install -e ".[dev]"  # 또는 uv pip install -e ".[dev]"
 
 # 3. 테스트 실행
 pytest
