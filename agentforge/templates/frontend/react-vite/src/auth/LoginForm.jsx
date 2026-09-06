@@ -32,8 +32,8 @@ export function LoginForm({ onLoginSuccess }) {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-xl">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-skred to-skorange text-white shadow-md">
-            <Shield className="h-8 w-8" />
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center">
+            <img src="/agentforge_icon.png" alt="Logo" className="h-14 w-14 object-contain drop-shadow-sm" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">{{ project_name }}</h1>
           <p className="mt-1 text-sm text-gray-500">Enterprise AI Agent Platform</p>

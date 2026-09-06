@@ -93,13 +93,21 @@ def test_scaffolding_engine_full_generation():
         assert (src_dir / "bootstrap.py").exists()
         assert (src_dir / "main.py").exists()
 
-        # Frontend checks (Multi-entrypoint)
+        # Frontend checks (Multi-entrypoint & Branding Assets)
         frontend_dir = project_dir / "frontend"
         assert frontend_dir.exists()
         assert (frontend_dir / "package.json").exists()
         assert (frontend_dir / "vite.config.js").exists()
         assert (frontend_dir / "index.html").exists()
         assert (frontend_dir / "admin.html").exists()
+        assert (frontend_dir / "public" / "favicon.ico").exists()
+        assert (frontend_dir / "public" / "agentforge_icon.png").exists()
+
+        index_html = (frontend_dir / "index.html").read_text(encoding="utf-8")
+        admin_html = (frontend_dir / "admin.html").read_text(encoding="utf-8")
+        assert 'href="/favicon.ico"' in index_html
+        assert 'href="/favicon.ico"' in admin_html
+
         assert (frontend_dir / "src" / "App.jsx").exists()
         assert (frontend_dir / "src" / "admin" / "AdminApp.jsx").exists()
         assert (frontend_dir / "src" / "components" / "chat" / "ChatAssistant.jsx").exists()

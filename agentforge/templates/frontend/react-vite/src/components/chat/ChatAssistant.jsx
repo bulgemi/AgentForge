@@ -116,9 +116,7 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
       {/* Header */}
       <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-skred to-skorange text-white shadow-sm">
-            <Bot className="h-5 w-5" />
-          </div>
+          <img src="/agentforge_icon.png" alt="Logo" className="h-8 w-8 object-contain" />
           <div>
             <h2 className="text-sm font-bold text-gray-900">{{ project_name }}</h2>
             <p className="text-xs text-emerald-600 font-medium">● Connected (SSE Stream)</p>

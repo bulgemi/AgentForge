@@ -18,6 +18,7 @@ from .validator import (
 )
 
 PACKAGE_TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
+PACKAGE_ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 
 
 class ScaffoldingEngine:
@@ -149,6 +150,14 @@ class ScaffoldingEngine:
             frontend_tpl = self.templates_dir / "frontend" / "react-vite"
             if frontend_tpl.exists():
                 self.copy_template_tree(frontend_tpl, dest_root / "frontend", context)
+
+            # Ensure branding assets (favicon, logos) from assets/ are synced to frontend/public
+            if PACKAGE_ASSETS_DIR.exists():
+                dest_public = dest_root / "frontend" / "public"
+                dest_public.mkdir(parents=True, exist_ok=True)
+                for asset_file in PACKAGE_ASSETS_DIR.iterdir():
+                    if asset_file.is_file() and not asset_file.name.startswith("."):
+                        shutil.copy2(asset_file, dest_public / asset_file.name)
         elif clean_frontend == "streamlit":
             streamlit_tpl = self.templates_dir / "frontend" / "streamlit"
             if streamlit_tpl.exists():
