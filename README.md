@@ -211,6 +211,12 @@ AgentForge/
 │       │       ├── tailwind.config.js
 │       │       └── package.json
 │       │
+│       ├── scripts/               # 생성 프로젝트용 원클릭 개발/설치 스크립트 템플릿
+│       │   ├── run.sh             # macOS/Linux 원클릭 설치 및 동시 실행 스크립트
+│       │   ├── run.bat            # Windows 원클릭 설치 및 동시 실행 스크립트
+│       │   ├── setup.sh           # macOS/Linux 의존성 환경 구축 스크립트
+│       │   └── setup.bat          # Windows 의존성 환경 구축 스크립트
+│       │
 │       ├── infra/                 # 로컬 통합 인프라 템플릿
 │       │   ├── docker-compose.yml # PostgreSQL 16 + Redis 7 + Backend + Frontend
 │       │   └── postgres-init/     # DB 초기화 스크립트
@@ -226,6 +232,8 @@ AgentForge/
 │   ├── test_cli.py                # CLI 명령어 단위 테스트 (4 passed)
 │   └── e2e/                       # 4-Tier E2E 통합 테스트 스위트 (98 passed)
 │
+├── install.sh                     # macOS / Linux 원클릭 환경 구성 및 CLI 설치 스크립트
+├── install.bat                    # Windows 원클릭 환경 구성 및 CLI 설치 스크립트
 ├── pyproject.toml                 # 패키지 빌드 메타데이터 및 CLI 스크립트 엔트리포인트 (`agentforge`, `af`)
 ├── LICENSE                        # MIT License
 └── README.md
@@ -239,6 +247,10 @@ AgentForge/
 
 ```text
 my-awesome-agent/
+├── run.sh                         # macOS/Linux 원클릭 의존성 설치 & 서버 동시 실행
+├── run.bat                        # Windows 원클릭 의존성 설치 & 서버 동시 실행
+├── setup.sh                       # macOS/Linux 의존성 사전 구성 스크립트
+├── setup.bat                      # Windows 의존성 사전 구성 스크립트
 ├── backend/                       # FastAPI 기반 백엔드 (Clean Architecture 계층 구조)
 │   ├── src/                       # 백엔드 핵심 소스
 │   │   ├── core/                  # 복사된 독립형 Standalone Core 엔진
@@ -294,7 +306,24 @@ AgentForge Scaffolding Generator는 완전한 독립형(Standalone) 프로덕션
 
 ### 1. 설치 방법 (Installation)
 
-#### 방법 A. PyPI / uv를 통한 전역 CLI 설치
+#### 방법 A. 원클릭 자동 설치 스크립트 (권장 - macOS / Linux / Windows)
+저장소를 클론한 후 OS에 맞는 원클릭 설치 스크립트를 실행하면 가상환경 구성, 패키지 설치, CLI 등록까지 전 과정을 자동으로 완료합니다.
+```bash
+# 1. 저장소 클론
+git clone https://github.com/bulgemi/AgentForge.git
+cd AgentForge
+
+# 2-1. macOS / Linux
+./install.sh
+
+# 2-2. Windows
+install.bat
+```
+- 시스템의 Python 3.10+ 및 `uv` 설치 여부를 자동 감지합니다.
+- `uv`가 있으면 초고속 설치를 진행하며, 없을 시 표준 `python venv/pip`로 안전하게 폴백합니다.
+- 설치 완료 후 `source .venv/bin/activate` (Windows: `.venv\Scripts\activate`) 후 바로 `af --help`를 실행할 수 있습니다.
+
+#### 방법 B. PyPI / uv를 통한 전역 CLI 설치
 ```bash
 # pip를 통한 설치
 pip install agentforge
@@ -304,8 +333,7 @@ uv tool install agentforge
 # pipx install agentforge
 ```
 
-#### 방법 B. GitHub 소스 클론 및 개발자 모드 설치
-최신 개발 버전 코드를 직접 사용하거나 기여하고자 할 때 로컬에서 설치합니다.
+#### 방법 C. 수동 소스 클론 및 개발자 모드 설치
 ```bash
 # 1. 저장소 클론
 git clone https://github.com/bulgemi/AgentForge.git
@@ -405,11 +433,18 @@ AgentForge 스캐폴딩 엔진은 단순 파일 복사가 아닌, 프로덕션 �
 
 AgentForge CLI는 프로젝트 스캐폴딩부터 로컬 테스트, 빌드, 배포까지 전 주기(Full Lifecycle)를 지원합니다.
 
-### 1) 로컬 개발 서버 실행 (`dev`)
+### 1) 로컬 개발 서버 실행 (`dev` 또는 원클릭 스크립트)
 백엔드(FastAPI)와 프론트엔드(Vite React / Streamlit)를 한 번에 실행합니다.
 ```bash
 cd <프로젝트디렉토리>
-agentforge dev
+
+# 방법 1: 프로젝트 내 원클릭 스크립트 (의존성 미설치 시 자동 설치 후 실행)
+./run.sh    # macOS / Linux
+run.bat     # Windows
+
+# 방법 2: AgentForge CLI 사용
+agentforge dev  # 또는 af dev
+
 # Backend: http://localhost:8000 (API Docs: http://localhost:8000/docs)
 # Frontend: http://localhost:5173 (React/Vite) 또는 http://localhost:8501 (Streamlit)
 ```

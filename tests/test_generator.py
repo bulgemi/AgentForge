@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 import pytest
@@ -74,6 +75,16 @@ def test_scaffolding_engine_full_generation():
         assert project_dir.exists()
         assert (project_dir / "README.md").exists()
         assert (project_dir / "docker-compose.yml").exists()
+
+        # One-click convenience scripts checks (macOS / Linux / Windows)
+        run_sh = project_dir / "run.sh"
+        setup_sh = project_dir / "setup.sh"
+        assert run_sh.exists()
+        assert (project_dir / "run.bat").exists()
+        assert setup_sh.exists()
+        assert (project_dir / "setup.bat").exists()
+        assert os.access(run_sh, os.X_OK)
+        assert os.access(setup_sh, os.X_OK)
 
         # Backend checks
         backend_dir = project_dir / "backend"

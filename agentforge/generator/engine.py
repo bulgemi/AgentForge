@@ -178,6 +178,17 @@ class ScaffoldingEngine:
         if k8s_tpl.exists():
             self.copy_template_tree(k8s_tpl, dest_root / "k8s", context)
 
+        # 4.1 Copy Convenience Scripts (run.sh, run.bat, setup.sh, setup.bat)
+        scripts_tpl = self.templates_dir / "scripts"
+        if scripts_tpl.exists():
+            for item in scripts_tpl.iterdir():
+                if item.is_file():
+                    content = item.read_text(encoding="utf-8")
+                    dest_file = dest_root / item.name
+                    dest_file.write_text(self.render_content(content, context), encoding="utf-8")
+                    if item.name.endswith(".sh"):
+                        dest_file.chmod(dest_file.stat().st_mode | 0o755)
+
         # 5. Standalone Core Engine Copy
         dest_backend_src = dest_root / "backend" / "src"
         copy_core_engine(dest_backend_src, overwrite=True)
@@ -197,7 +208,20 @@ Standalone AI Agent Project built with [AgentForge](https://github.com/bulgemi/A
 
 ## Quick Start
 
-### 1. Run with Docker Compose
+### 1. One-Click Local Run (Recommended)
+Automatically sets up virtual environment, installs dependencies, and runs dev servers.
+
+```bash
+# macOS / Linux
+./run.sh
+
+# Windows
+run.bat
+```
+
+> **Tip**: To install dependencies only without starting servers, run `./setup.sh` or `setup.bat`.
+
+### 2. Run with Docker Compose
 ```bash
 docker-compose up -d
 ```
@@ -205,7 +229,7 @@ docker-compose up -d
 - Frontend (Admin): http://localhost:5173/admin/
 - Backend API Docs: http://localhost:8000/docs
 
-### 2. Run Locally
+### 3. Manual Run Locally
 ```bash
 # Backend
 cd backend
