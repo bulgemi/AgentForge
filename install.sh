@@ -19,14 +19,14 @@ echo "          ⚡ AgentForge CLI & Environment Setup          "
 echo "=========================================================="
 echo -e "${NC}"
 
-# 1. Check Python installation (3.10+)
+# 1. Check Python installation (3.12+)
 PYTHON_CMD=""
 if command -v python3 >/dev/null 2>&1; then
     PYTHON_CMD="python3"
 elif command -v python >/dev/null 2>&1; then
     PYTHON_CMD="python"
 else
-    echo -e "${RED}[ERROR] Python is not installed. Please install Python 3.10 or higher.${NC}"
+    echo -e "${RED}[ERROR] Python is not installed. Please install Python 3.12 or higher.${NC}"
     exit 1
 fi
 
@@ -34,8 +34,8 @@ PY_VER=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.versi
 PY_MAJOR=$($PYTHON_CMD -c "import sys; print(sys.version_info.major)")
 PY_MINOR=$($PYTHON_CMD -c "import sys; print(sys.version_info.minor)")
 
-if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 10 ]; }; then
-    echo -e "${RED}[ERROR] Python 3.10+ required. Current version: ${PY_VER}${NC}"
+if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 12 ]; }; then
+    echo -e "${RED}[ERROR] Python 3.12+ required. Current version: ${PY_VER}${NC}"
     exit 1
 fi
 

@@ -6,7 +6,7 @@
   > **Fast, Standalone & Production-Ready AI Agent Framework**  
   > 빠른 AI 에이전트 개발을 위해 프론트엔드, 백엔드, Kubernetes 배포까지 풀스택 독립형 아키텍처를 자동 생성하는 오픈소스 프레임워크입니다.
 
-  [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+  [![Python Version](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   [![Architecture](https://img.shields.io/badge/Architecture-Fullstack%20Monorepo-green.svg)](#-생성되는-프로젝트-구조-user-project-layout)
   [![Frameworks](https://img.shields.io/badge/Supported%20Frameworks-LangChain%20%7C%20LangGraph%20%7C%20DeepAgent%20%7C%20ADK%20%7C%20Bedrock-orange.svg)](#-지원-에이전트-프레임워크-5종)
@@ -319,7 +319,7 @@ cd AgentForge
 # 2-2. Windows
 install.bat
 ```
-- 시스템의 Python 3.10+ 및 `uv` 설치 여부를 자동 감지합니다.
+- 시스템의 Python 3.12+ 및 `uv` 설치 여부를 자동 감지합니다.
 - `uv`가 있으면 초고속 설치를 진행하며, 없을 시 표준 `python venv/pip`로 안전하게 폴백합니다.
 - 설치 완료 후 `source .venv/bin/activate` (Windows: `.venv\Scripts\activate`) 후 바로 `af --help`를 실행할 수 있습니다.
 

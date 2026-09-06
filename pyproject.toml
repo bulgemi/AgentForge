@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Fast, Standalone & Production-Ready AI Agent Framework"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
     { name = "Kim Donghun", email = "donghun_kim@skcc.com" }
 ]

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "{{ project_name }}-backend"
 version = "0.1.0"
 description = "{{ project_name }} Backend Service"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.22.0",

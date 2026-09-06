@@ -130,7 +130,7 @@ class ScaffoldingEngine:
             "project_name_snake": clean_name.replace("-", "_"),
             "framework": clean_framework,
             "frontend": clean_frontend,
-            "python_version": "3.11",
+            "python_version": "3.12",
         }
 
         # 1. Copy Backend Template

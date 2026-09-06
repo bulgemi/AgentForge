@@ -26,7 +26,7 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 if "%PYTHON_CMD%"=="" (
-    echo [ERROR] Python is not found. Please install Python 3.10 or higher from https://python.org.
+    echo [ERROR] Python is not found. Please install Python 3.12 or higher from https://python.org.
     echo Make sure to check "Add Python to PATH" during installation.
     pause
     exit /b 1
@@ -34,6 +34,14 @@ if "%PYTHON_CMD%"=="" (
 
 for /f "tokens=2" %%i in ('%PYTHON_CMD% --version 2^>^&1') do set "PY_VER=%%i"
 echo [OK] Found Python %PY_VER% (%PYTHON_CMD%)
+
+@rem Check Python version >= 3.12
+%PYTHON_CMD% -c "import sys; exit(0 if sys.version_info >= (3, 12) else 1)" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Python 3.12+ is required. Current version is %PY_VER%.
+    pause
+    exit /b 1
+)
 
 @rem 2. Navigate to script directory
 cd /d "%~dp0"

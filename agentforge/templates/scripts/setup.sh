@@ -32,7 +32,16 @@ if command -v python3 >/dev/null 2>&1; then
 elif command -v python >/dev/null 2>&1; then
     PYTHON_CMD="python"
 else
-    echo -e "${RED}[ERROR] Python 3.10+ required but not found.${NC}"
+    echo -e "${RED}[ERROR] Python 3.12+ required but not found.${NC}"
+    exit 1
+fi
+
+PY_VER=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+PY_MAJOR=$($PYTHON_CMD -c "import sys; print(sys.version_info.major)")
+PY_MINOR=$($PYTHON_CMD -c "import sys; print(sys.version_info.minor)")
+
+if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 12 ]; }; then
+    echo -e "${RED}[ERROR] Python 3.12+ required. Current version: ${PY_VER}${NC}"
     exit 1
 fi
 

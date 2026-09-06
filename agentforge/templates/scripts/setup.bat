@@ -31,7 +31,15 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 if "%PYTHON_CMD%"=="" (
-    echo [ERROR] Python 3.10+ is required but not found.
+    echo [ERROR] Python 3.12+ is required but not found.
+    pause
+    exit /b 1
+)
+
+@rem Check Python version >= 3.12
+%PYTHON_CMD% -c "import sys; exit(0 if sys.version_info >= (3, 12) else 1)" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Python 3.12+ is required.
     pause
     exit /b 1
 )

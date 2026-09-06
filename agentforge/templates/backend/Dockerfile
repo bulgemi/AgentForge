@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
@@ -7,12 +7,12 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml .
 RUN uv pip install --no-cache --system -r <(uv pip compile pyproject.toml)
 
-FROM python:3.11-slim AS runner
+FROM python:3.12-slim AS runner
 
 WORKDIR /app
 RUN useradd -u 1000 -m appuser
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . /app
