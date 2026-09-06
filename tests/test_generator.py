@@ -86,12 +86,35 @@ def test_scaffolding_engine_full_generation():
         assert os.access(run_sh, os.X_OK)
         assert os.access(setup_sh, os.X_OK)
 
+        # Root .gitignore check
+        gitignore_path = project_dir / ".gitignore"
+        assert gitignore_path.exists()
+        gi_content = gitignore_path.read_text(encoding="utf-8")
+        assert "backend/.env" in gi_content
+        assert "frontend/.env" in gi_content
+        assert "!.env.sample" in gi_content
+
         # Backend checks
         backend_dir = project_dir / "backend"
         assert backend_dir.exists()
         assert (backend_dir / "pyproject.toml").exists()
         assert (backend_dir / "Dockerfile").exists()
         assert (backend_dir / "alembic.ini").exists()
+
+        # Backend .env & .env.sample checks
+        env_file = backend_dir / ".env"
+        env_sample_file = backend_dir / ".env.sample"
+        assert env_file.exists()
+        assert env_sample_file.exists()
+
+        env_content = env_file.read_text(encoding="utf-8")
+        assert 'PROJECT_NAME="demo-agent"' in env_content
+        assert "DATABASE_DBNAME=demo_agent" in env_content
+        assert "JWT_SECRET_KEY=demo-agent-secret-key" in env_content
+
+        env_sample_content = env_sample_file.read_text(encoding="utf-8")
+        assert 'PROJECT_NAME="demo-agent"' in env_sample_content
+        assert "DATABASE_DBNAME=demo_agent" in env_sample_content
 
         # Clean Architecture layer checks
         src_dir = backend_dir / "src"
@@ -113,6 +136,21 @@ def test_scaffolding_engine_full_generation():
         assert (frontend_dir / "admin.html").exists()
         assert (frontend_dir / "public" / "favicon.ico").exists()
         assert (frontend_dir / "public" / "agentforge_icon.png").exists()
+
+        # Frontend .env & .env.sample checks
+        fe_env = frontend_dir / ".env"
+        fe_env_sample = frontend_dir / ".env.sample"
+        assert fe_env.exists()
+        assert fe_env_sample.exists()
+
+        fe_env_content = fe_env.read_text(encoding="utf-8")
+        assert 'VITE_APP_TITLE="demo-agent"' in fe_env_content
+        assert "VITE_API_BASE_URL=/api/v1" in fe_env_content
+        assert "VITE_DEV_PROXY_TARGET=http://localhost:8000" in fe_env_content
+
+        fe_env_sample_content = fe_env_sample.read_text(encoding="utf-8")
+        assert 'VITE_APP_TITLE="demo-agent"' in fe_env_sample_content
+        assert "VITE_API_BASE_URL=/api/v1" in fe_env_sample_content
 
         index_html = (frontend_dir / "index.html").read_text(encoding="utf-8")
         admin_html = (frontend_dir / "admin.html").read_text(encoding="utf-8")

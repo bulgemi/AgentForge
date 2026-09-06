@@ -58,6 +58,11 @@ class BaseAppSettings(BaseSettings):
         validation_alias=AliasChoices("LOG_LEVEL", "LOGGING_LEVEL"),
         description="Logging level (DEBUG, INFO, WARNING, ERROR)",
     )
+    log_format: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LOG_FORMAT"),
+        description="Custom log format string",
+    )
     debug: bool = Field(
         default=False,
         validation_alias=AliasChoices("DEBUG", "APP_DEBUG"),
@@ -101,6 +106,16 @@ class BaseAppSettings(BaseSettings):
         default="agentforge",
         validation_alias=AliasChoices("DATABASE_DBNAME", "DATABASE_NAME", "DB_NAME"),
         description="Database catalog / database name",
+    )
+    database_schema: str = Field(
+        default="public",
+        validation_alias=AliasChoices("DATABASE_SCHEMA", "DB_SCHEMA"),
+        description="Database schema name",
+    )
+    database_auto_migrate: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("DATABASE_AUTO_MIGRATE", "DB_AUTO_MIGRATE"),
+        description="Automatically initialize or migrate database schema on startup",
     )
     database_pool_size: int = Field(
         default=10,
@@ -223,6 +238,74 @@ class BaseAppSettings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY"),
         description="Google Gemini API authentication key",
+    )
+    openai_model_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_MODEL_NAME"),
+        description="OpenAI model identifier (e.g. gpt-4o)",
+    )
+    gemini_model_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("GEMINI_MODEL_NAME"),
+        description="Google Gemini model identifier (e.g. gemini-2.5-pro)",
+    )
+    claude_model_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("CLAUDE_MODEL_NAME"),
+        description="Anthropic Claude model identifier (e.g. claude-3-5-sonnet-20240620)",
+    )
+    bedrock_model_id: Optional[str] = Field(
+        default="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        validation_alias=AliasChoices("BEDROCK_MODEL_ID", "AWS_BEDROCK_MODEL_ID"),
+        description="AWS Bedrock model identifier",
+    )
+    bedrock_region_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("BEDROCK_REGION_NAME", "AWS_REGION", "AWS_DEFAULT_REGION"),
+        description="AWS Bedrock region name",
+    )
+
+    # -------------------------------------------------------------------------
+    # 6. MCP Server Settings
+    # -------------------------------------------------------------------------
+    mcp_server_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("AX_MCP_SERVER_URL", "MCP_SERVER_URL"),
+        description="Model Context Protocol (MCP) server endpoint URL",
+    )
+    mcp_server_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("AX_MCP_SERVER_API_KEY", "MCP_SERVER_API_KEY"),
+        description="Authentication API key for MCP server",
+    )
+    mcp_server_name: Optional[str] = Field(
+        default="agentforge-mcp",
+        validation_alias=AliasChoices("AX_MCP_SERVER_NAME", "MCP_SERVER_NAME"),
+        description="Registered identifier for the MCP server",
+    )
+
+    # -------------------------------------------------------------------------
+    # 7. Langfuse Tracing Settings
+    # -------------------------------------------------------------------------
+    langfuse_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LANGFUSE_ENABLED"),
+        description="Toggle for Langfuse LLM tracing and observability",
+    )
+    langfuse_public_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LANGFUSE_PUBLIC_KEY"),
+        description="Langfuse public API key",
+    )
+    langfuse_secret_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LANGFUSE_SECRET_KEY"),
+        description="Langfuse secret API key",
+    )
+    langfuse_base_url: Optional[str] = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
+        description="Base URL for Langfuse server",
     )
 
     # -------------------------------------------------------------------------

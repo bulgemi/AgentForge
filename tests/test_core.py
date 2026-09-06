@@ -766,8 +766,14 @@ def test_base_app_settings_defaults():
     assert settings.debug is False
     assert settings.database_pool_size == 10
     assert settings.database_pool_timeout == 30
+    assert settings.database_auto_migrate is True
+    assert settings.database_schema == "public"
     assert settings.default_provider == "openai"
     assert settings.default_model == "gpt-4o"
+    assert settings.bedrock_model_id == "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    assert settings.mcp_server_name == "agentforge-mcp"
+    assert settings.langfuse_enabled is False
+    assert settings.langfuse_base_url == "http://localhost:3000"
     assert settings.timeout == 60.0
     assert settings.max_retries == 3
 
