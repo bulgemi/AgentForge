@@ -226,8 +226,9 @@ AgentForge/
 │       │   └── setup.bat          # Windows 의존성 환경 구축 스크립트 (.env 자동 초기화)
 │       │
 │       ├── infra/                 # 로컬 통합 인프라 템플릿
-│       │   ├── docker-compose.yml # PostgreSQL 16 + Redis 7 + Backend(env_file 연동) + Frontend
-│       │   └── postgres-init/     # DB 초기화 스크립트
+│       │   ├── docker-compose.yml # PostgreSQL 16 + Redis 7.4 + Langfuse v3 + OpenSearch 2.19.3 + App
+│       │   ├── postgres-init/     # PostgreSQL 16 다중 DB 조건부 프로비저닝 (app DB & langfuse DB)
+│       │   └── config/opensearch/ # OpenSearch 1536차원 k-NN faiss 인덱스 템플릿 및 자동 등록 스크립트
 │       │
 │       └── k8s/                   # Kubernetes 실전 배포 매니페스트 템플릿
 │           ├── dev/               # 개발 환경 (Deployment, Service, ConfigMap)
@@ -235,8 +236,8 @@ AgentForge/
 │           └── k8s-deploy.sh      # 원클릭 배포 자동화 스크립트
 │
 ├── tests/                         # 프레임워크 자체 테스트 스위트
-│   ├── test_core.py               # Core 런타임 단위 테스트 (36 passed)
-│   ├── test_generator.py          # 프로젝트 생성 및 Core 복사 무결성 검증 (5 passed)
+│   ├── test_core.py               # Core 런타임 단위 테스트 (37 passed)
+│   ├── test_generator.py          # 프로젝트 생성, 인프라 템플릿 및 무결성 검증 (10 passed)
 │   ├── test_cli.py                # CLI 명령어 단위 테스트 (4 passed)
 │   └── e2e/                       # 4-Tier E2E 통합 테스트 스위트 (98 passed)
 │
@@ -304,8 +305,12 @@ my-awesome-agent/
 │   ├── prd/                       # 운영(Prod) 환경 매니페스트 (HA 고가용성 & 리소스 튜닝)
 │   └── k8s-deploy.sh              # 환경별 원클릭 클러스터 배포 쉘 스크립트
 │
-├── docker-compose.yml             # 로컬 통합 개발 환경 원클릭 실행 (Postgres 16 + Redis 7 + Backend(env_file 연동) + Frontend)
-├── postgres-init/                 # PostgreSQL 초기화 스크립트
+├── docker-compose.yml             # 로컬 통합 인프라 및 애플리케이션 컨테이너 (infra, app, observability, search, audit, all)
+├── postgres-init/                 # PostgreSQL 16 다중 DB 조건부 프로비저닝 스크립트 (init.sql)
+├── config/                        # OpenSearch 인덱스 템플릿 및 헬스체크 등록 스크립트
+│   └── opensearch/
+│       ├── agent-index-template.json
+│       └── init-opensearch.sh
 └── README.md                      # 프로젝트 전용 안내 문서
 ```
 
@@ -337,8 +342,13 @@ AgentForge로 생성되는 모든 프로젝트는 [pay](https://github.com/Seori
 | | `JWT_ALGORITHM` | `HS256` | JWT 서명 알고리즘 |
 | | `CORS_ORIGINS` | `["http://localhost:5173", ...]` | 허용 CORS 오리진 목록 |
 | | `LDAP_ENABLED` / `SAML_ENABLED` | `false` | 사내 계정 연동 및 SAML SSO 활성화 토글 |
-| **MCP & Tracing** | `AX_MCP_SERVER_URL` / `AX_MCP_SERVER_NAME` | `http://127.0.0.1:8080/mcp` | Model Context Protocol 도구 서버 연동 |
-| | `LANGFUSE_ENABLED` / `LANGFUSE_BASE_URL` | `false` / `http://localhost:3000` | Langfuse LLM 관측성(Observability) 및 추적 토글 |
+| **MCP 도구** | `AX_MCP_SERVER_URL` / `AX_MCP_SERVER_NAME` | `http://127.0.0.1:8080/mcp` | Model Context Protocol 도구 서버 연동 |
+| **LLM 관측성 (Langfuse)** | `LANGFUSE_ENABLED` / `LANGFUSE_BASE_URL` | `true` / `http://localhost:3000` | Langfuse v3 LLM 추적 및 관측성 활성화 토글 |
+| | `LANGFUSE_NEXTAUTH_SECRET` / `LANGFUSE_SALT` | `{{ project_name }}-...` | Langfuse Web 대시보드 인증 시크릿 및 솔트 |
+| **검색 & 벡터 (OpenSearch)** | `OPENSEARCH_URL` / `OPENSEARCH_HOST` | `http://localhost:9200` / `localhost` | OpenSearch 엔드포인트 URL 및 호스트 |
+| | `OPENSEARCH_PORT` / `OPENSEARCH_INDEX_PREFIX` | `9200` / `{{ project_name_snake }}` | 포트 및 인덱스 패턴 접두사 |
+| | `OPENSEARCH_USERNAME` / `OPENSEARCH_PASSWORD` | `admin` / `admin` | OpenSearch 인증 계정 정보 |
+| | `OPENSEARCH_USE_SSL` / `OPENSEARCH_VERIFY_CERTS` | `false` / `false` | SSL 암호화 및 인증서 검증 토글 |
 
 ### 2. 프론트엔드 환경 변수 (`frontend/.env` & `frontend/.env.sample`)
 
@@ -525,6 +535,83 @@ agentforge build --tag v1.0.0
 ```bash
 agentforge deploy --namespace ai-agents
 ```
+
+---
+
+## 🐳 로컬 인프라 및 Docker Compose 가이드 (Local Infrastructure & Profiles)
+
+AgentForge로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 저장소의 운영 검증 인프라 구성을 계승하여, 개발에 필요한 핵심 백엔드 인프라인 **PostgreSQL 16**, **Redis 7.4**, **Langfuse v3 풀스택**, **OpenSearch 2.19.3 & Dashboards**를 단일 `docker-compose.yml` 및 **Docker Compose Profiles**로 유연하게 제어할 수 있습니다.
+
+### 1. 서비스 스택 및 프로파일 구성 (Compose Profiles)
+
+서비스들은 목적에 따라 6가지 논리적 프로파일(`infra`, `observability`, `search`, `audit`, `app`, `all`)로 분리되어 있어, 필요한 리소스만 선별 구동할 수 있습니다.
+
+| 서비스명 | 이미지 | 기본 포트 | 프로파일 | 주요 역할 및 특징 |
+| :--- | :--- | :--- | :--- | :--- |
+| **`postgres`** | `postgres:16-alpine` | `5432` | `infra`, `all` | `init.sql`의 `\gexec` 조건부 생성을 통해 애플리케이션 DB 및 `langfuse` 메타 DB 동시 프로비저닝 (`uuid-ossp`, `pgcrypto` 확장) |
+| **`redis`** | `redis:7.4-alpine` | `6379` | `infra`, `all` | 분산 세션, 토큰 블랙리스트, Rate Limiter 및 Langfuse 비동기 큐/캐시 공유 |
+| **`clickhouse`** | `clickhouse-server:24.3-alpine` | `8123`, `9000` | `infra`, `observability`, `all` | Langfuse LLM 관측성 및 고속 시계열 분석 데이터 저장소 |
+| **`minio`** | `minio:RELEASE...` | `9000`, `9001` | `infra`, `observability`, `all` | Langfuse OTel 이벤트 페이로드 저장용 S3 호환 오브젝트 스토리지 (콘솔: `:9001`) |
+| **`minio-setup`** | `minio/mc` | - | `infra`, `observability`, `all` | MinIO 헬스체크 후 `langfuse` 버킷 자동 생성 및 네트워크 재시도 보장 |
+| **`langfuse`** | `langfuse/langfuse:3` | `3000` | `infra`, `observability`, `all` | LLM Observability & Step Tracing 웹 대시보드 및 수집 API |
+| **`langfuse-worker`** | `langfuse-worker:3` | - | `infra`, `observability`, `all` | 관측성 이벤트 비동기 처리 및 ClickHouse 데이터 파이프라인 워커 |
+| **`opensearch`** | `opensearch:2.19.3` | `9200` | `infra`, `search`, `audit`, `all` | 싱글노드/메모리락 로컬 최적화 분산 검색 및 1536차원 HNSW k-NN 벡터 엔진 (`faiss`) |
+| **`opensearch-init`** | `curlimages/curl:8.14.1` | - | `infra`, `search`, `audit`, `all` | 클러스터 기동 대기 후 k-NN 인덱스 템플릿(`{{ project_name_snake }}-template`) 자동 등록 |
+| **`opensearch-dashboards`** | `opensearch-dashboards:2.19.3` | `5601` | `infra`, `search`, `audit`, `all` | 인덱스 데이터 시각화 및 검색 분석 웹 GUI |
+| **`backend`** | `./backend/Dockerfile` | `8000` | `app`, `all` | Clean Architecture 기반 FastAPI 에이전트 백엔드 서버 |
+| **`frontend`** | `./frontend/docker/Dockerfile` | `5173` | `app`, `all` | Nginx 기반 Vite React 사용자 포털 및 관리자 콘솔 |
+
+---
+
+### 2. 프로파일별 실행 및 관리 명령어
+
+프로젝트 루트에서 `docker compose --profile <이름>` 명령어로 원하는 스택을 제어할 수 있습니다.
+
+```bash
+# 1. 핵심 인프라 전체 시작 (Postgres, Redis, Langfuse v3 풀스택, OpenSearch)
+docker compose --profile infra up -d
+
+# 2. LLM 관측성 스택만 시작 (Langfuse Web, Worker, ClickHouse, MinIO)
+docker compose --profile observability up -d
+
+# 3. 검색 및 벡터 스토어만 시작 (OpenSearch, Init, Dashboards)
+docker compose --profile search up -d
+
+# 4. 감사 로그 및 검색 스택 시작
+docker compose --profile audit up -d
+
+# 5. 애플리케이션 및 인프라 전체 컨테이너 시작 (Backend + Frontend 포함)
+docker compose --profile all up -d
+
+# 6. 구동 중인 서비스 상태 확인
+docker compose ps
+
+# 7. 전체 인프라 종료 및 컨테이너 정리
+docker compose --profile all down
+# (볼륨 데이터까지 완전 초기화 시: docker compose --profile all down -v)
+```
+
+---
+
+### 3. 주요 서비스 웹 대시보드 및 엔드포인트 URL
+
+인프라 기동 후 브라우저에서 즉시 접속 가능한 로컬 대시보드 안내:
+
+- **Frontend (사용자 채팅 포털)**: [http://localhost:5173/](http://localhost:5173/)
+- **Frontend (관리자 콘솔)**: [http://localhost:5173/admin.html](http://localhost:5173/admin.html)
+- **Backend Swagger API 문서**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Langfuse LLM 관측성 UI**: [http://localhost:3000](http://localhost:3000)
+- **OpenSearch Dashboards GUI**: [http://localhost:5601](http://localhost:5601)
+- **OpenSearch REST API**: [http://localhost:9200](http://localhost:9200)
+- **MinIO 오브젝트 스토리지 콘솔**: [http://localhost:9001](http://localhost:9001) (`minioadmin` / `minioadmin`)
+
+---
+
+### 4. 로컬 원클릭 런처 자동 연동 (`run.sh` / `run.bat`)
+
+생성된 프로젝트의 `./run.sh` (macOS/Linux) 및 `run.bat` (Windows) 스크립트는 Docker 데몬의 동작 여부를 자동 감지합니다.
+- **Docker 실행 중**: `docker compose --profile infra up -d`를 자동 실행하여 데이터베이스, 캐시, Langfuse, OpenSearch를 백그라운드에 띄운 후 백엔드/프론트엔드 개발 서버를 기동합니다.
+- **Docker 미실행 상태**: 경고 메시지와 함께 로컬 인프라 실행을 안전하게 건너뛰고 기존 개발 서버를 기동합니다.
 
 ---
 
