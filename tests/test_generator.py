@@ -27,6 +27,10 @@ def test_validator_project_name():
         validate_project_name("my agent with spaces")
     with pytest.raises(ValidationError):
         validate_project_name("agent@invalid!")
+    with pytest.raises(ValidationError):
+        validate_project_name("---")
+    with pytest.raises(ValidationError):
+        validate_project_name("___")
 
 
 def test_validator_framework():
@@ -74,17 +78,69 @@ def test_scaffolding_engine_full_generation():
 
         assert project_dir.exists()
         assert (project_dir / "README.md").exists()
-        assert (project_dir / "docker-compose.yml").exists()
+        
+        # Docker Compose & Infrastructure checks
+        dc_path = project_dir / "docker-compose.yml"
+        assert dc_path.exists()
+        dc_content = dc_path.read_text(encoding="utf-8")
+        assert "demo-agent-postgres" in dc_content
+        assert "demo-agent-redis" in dc_content
+        assert "demo-agent-clickhouse" in dc_content
+        assert "demo-agent-minio" in dc_content
+        assert "demo-agent-minio-setup" in dc_content
+        assert "demo-agent-langfuse" in dc_content
+        assert "demo-agent-langfuse-worker" in dc_content
+        assert "demo-agent-opensearch" in dc_content
+        assert "demo-agent-opensearch-init" in dc_content
+        assert "demo-agent-opensearch-dashboards" in dc_content
+        assert "demo-agent-backend" in dc_content
+        assert "demo-agent-frontend" in dc_content
+        assert 'profiles: ["infra", "all"]' in dc_content
+        assert 'profiles: ["infra", "observability", "all"]' in dc_content
+        assert 'profiles: ["infra", "search", "audit", "all"]' in dc_content
+        assert 'profiles: ["app", "all"]' in dc_content
+
+        # Postgres init SQL check
+        sql_path = project_dir / "postgres-init" / "init.sql"
+        assert sql_path.exists()
+        sql_content = sql_path.read_text(encoding="utf-8")
+        assert "CREATE DATABASE demo_agent" in sql_content
+        assert "CREATE DATABASE langfuse" in sql_content
+        assert 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"' in sql_content
+        assert 'CREATE EXTENSION IF NOT EXISTS "pgcrypto"' in sql_content
+
+        # OpenSearch config & init script check
+        os_init_sh = project_dir / "config" / "opensearch" / "init-opensearch.sh"
+        os_template = project_dir / "config" / "opensearch" / "agent-index-template.json"
+        assert os_init_sh.exists()
+        assert os_template.exists()
+        assert os.access(os_init_sh, os.X_OK)
+        assert "demo_agent-template" in os_init_sh.read_text(encoding="utf-8")
+        template_content = os_template.read_text(encoding="utf-8")
+        assert "demo_agent-*" in template_content
+        assert "knn_vector" in template_content
 
         # One-click convenience scripts checks (macOS / Linux / Windows)
         run_sh = project_dir / "run.sh"
         setup_sh = project_dir / "setup.sh"
+        run_bat = project_dir / "run.bat"
+        setup_bat = project_dir / "setup.bat"
         assert run_sh.exists()
-        assert (project_dir / "run.bat").exists()
+        assert run_bat.exists()
         assert setup_sh.exists()
-        assert (project_dir / "setup.bat").exists()
+        assert setup_bat.exists()
         assert os.access(run_sh, os.X_OK)
         assert os.access(setup_sh, os.X_OK)
+
+        run_sh_content = run_sh.read_text(encoding="utf-8")
+        assert "docker compose --profile infra up -d" in run_sh_content
+        assert "http://localhost:3000" in run_sh_content
+        assert "http://localhost:5601" in run_sh_content
+
+        run_bat_content = run_bat.read_text(encoding="utf-8")
+        assert "docker compose --profile infra up -d" in run_bat_content
+        assert "http://localhost:3000" in run_bat_content
+        assert "http://localhost:5601" in run_bat_content
 
         # Root .gitignore check
         gitignore_path = project_dir / ".gitignore"
@@ -111,10 +167,14 @@ def test_scaffolding_engine_full_generation():
         assert 'PROJECT_NAME="demo-agent"' in env_content
         assert "DATABASE_DBNAME=demo_agent" in env_content
         assert "JWT_SECRET_KEY=demo-agent-secret-key" in env_content
+        assert "OPENSEARCH_URL=http://localhost:9200" in env_content
+        assert "LANGFUSE_ENABLED=true" in env_content
 
         env_sample_content = env_sample_file.read_text(encoding="utf-8")
         assert 'PROJECT_NAME="demo-agent"' in env_sample_content
         assert "DATABASE_DBNAME=demo_agent" in env_sample_content
+        assert "OPENSEARCH_URL=http://localhost:9200" in env_sample_content
+        assert "LANGFUSE_ENABLED=true" in env_sample_content
 
         # Clean Architecture layer checks
         src_dir = backend_dir / "src"
@@ -170,3 +230,203 @@ def test_scaffolding_engine_full_generation():
 
         # Python syntax validation
         assert validate_generated_project(project_dir) is True
+
+
+def test_scaffolding_engine_infrastructure_idempotence_and_edge_cases():
+    """Verify infrastructure generation works with underscores, streamlit, and force overwrite."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        # 1. First generation
+        project_dir = engine.generate(
+            project_name="my_custom_bot",
+            target_dir=tmpdir,
+            framework="bedrock",
+            frontend="streamlit",
+        )
+
+        assert project_dir.exists()
+        dc_path = project_dir / "docker-compose.yml"
+        assert dc_path.exists()
+        dc_text = dc_path.read_text(encoding="utf-8")
+        assert "my_custom_bot-postgres" in dc_text
+        assert "my_custom_bot-opensearch" in dc_text
+
+        sql_path = project_dir / "postgres-init" / "init.sql"
+        assert sql_path.exists()
+        sql_text = sql_path.read_text(encoding="utf-8")
+        assert "CREATE DATABASE my_custom_bot" in sql_text
+        assert "CREATE DATABASE langfuse" in sql_text
+
+        init_sh = project_dir / "config" / "opensearch" / "init-opensearch.sh"
+        assert init_sh.exists()
+        assert os.access(init_sh, os.X_OK)
+        assert "my_custom_bot-template" in init_sh.read_text(encoding="utf-8")
+
+        template_json = project_dir / "config" / "opensearch" / "agent-index-template.json"
+        assert template_json.exists()
+        assert "my_custom_bot-*" in template_json.read_text(encoding="utf-8")
+
+        # 2. Re-generation with force=True (idempotent overwrite)
+        project_dir_force = engine.generate(
+            project_name="my_custom_bot",
+            target_dir=tmpdir,
+            framework="bedrock",
+            frontend="streamlit",
+            force=True,
+        )
+        assert project_dir_force.exists()
+        assert (project_dir_force / "docker-compose.yml").exists()
+        assert (project_dir_force / "postgres-init" / "init.sql").exists()
+        assert validate_generated_project(project_dir_force) is True
+
+
+def test_scaffolding_docker_compose_all_profiles_validation():
+    """Verify Docker Compose configurations are valid across all 6 logical profiles."""
+    import subprocess
+    import shutil
+
+    docker_bin = shutil.which("docker")
+    if not docker_bin:
+        pytest.skip("Docker binary not available on host")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="profile-test-bot",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="react-vite",
+        )
+
+        dc_path = project_dir / "docker-compose.yml"
+        assert dc_path.exists()
+
+        # Check all 6 required Compose profiles
+        profiles = ["infra", "app", "observability", "search", "audit", "all"]
+        for profile in profiles:
+            result = subprocess.run(
+                [docker_bin, "compose", "-f", str(dc_path), "--profile", profile, "config"],
+                capture_output=True,
+                text=True,
+                cwd=str(project_dir),
+            )
+            assert result.returncode == 0, (
+                f"Docker Compose failed for profile '{profile}':\n"
+                f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+            )
+
+
+def test_scaffolding_camel_case_project_name_snake_and_opensearch_schema():
+    """Verify CamelCase project names produce lowercase snake_case for DB and valid OpenSearch templates."""
+    import json
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="MySuperAgent",
+            target_dir=tmpdir,
+            framework="langchain",
+            frontend="react-vite",
+        )
+
+        # 1. OpenSearch index template JSON structure
+        template_file = project_dir / "config" / "opensearch" / "agent-index-template.json"
+        assert template_file.exists()
+        template_data = json.loads(template_file.read_text(encoding="utf-8"))
+
+        # Must be lowercase pattern: my_super_agent-*
+        assert template_data["index_patterns"] == ["my_super_agent-*"]
+        props = template_data["template"]["mappings"]["properties"]
+        assert props["@timestamp"]["type"] == "date"
+        assert props["trace_id"]["type"] == "keyword"
+        assert props["session_id"]["type"] == "keyword"
+        assert props["user_id"]["type"] == "keyword"
+        assert props["action"]["type"] == "keyword"
+        assert props["status"]["type"] == "keyword"
+        assert props["query"]["type"] == "text"
+        assert props["response"]["type"] == "text"
+        assert props["embedding"]["type"] == "knn_vector"
+        assert props["embedding"]["dimension"] == 1536
+        assert props["embedding"]["method"]["name"] == "hnsw"
+        assert props["embedding"]["method"]["space_type"] == "cosinesimil"
+
+        # 2. Postgres init SQL check for lowercased DB name
+        init_sql = project_dir / "postgres-init" / "init.sql"
+        assert init_sql.exists()
+        sql_text = init_sql.read_text(encoding="utf-8")
+        assert "CREATE DATABASE my_super_agent" in sql_text
+        assert "WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'my_super_agent')\\gexec" in sql_text
+        assert "\\c my_super_agent" in sql_text
+
+        # 3. OpenSearch init script has execution bit and lowercase template name
+        init_sh = project_dir / "config" / "opensearch" / "init-opensearch.sh"
+        assert init_sh.exists()
+        assert os.access(init_sh, os.X_OK)
+        sh_text = init_sh.read_text(encoding="utf-8")
+        assert "my_super_agent-template" in sh_text
+        assert "MAX_RETRIES=" in sh_text
+        assert "exit 1" in sh_text
+        assert "--fail-with-body" in sh_text
+
+
+def test_scaffolding_engine_token_and_naming_edge_cases():
+    """Verify to_snake_case and render_content robustness on complex names and bracket formatting."""
+    from agentforge.generator.engine import to_snake_case
+
+    # Naming normalization checks
+    assert to_snake_case("my--agent") == "my_agent"
+    assert to_snake_case("-leading-trailing-") == "leading_trailing"
+    assert to_snake_case("SuperDuperBot") == "super_duper_bot"
+    assert to_snake_case("already_snake_case") == "already_snake_case"
+    assert to_snake_case("AgentV2") == "agent_v2"
+    assert to_snake_case("Agent-47") == "agent_47"
+    assert to_snake_case("---") == "agentforge_app"
+    assert to_snake_case("___") == "agentforge_app"
+
+    # Token replacement with varying whitespace
+    engine = ScaffoldingEngine()
+    ctx = {"project_name": "alpha-agent", "project_name_snake": "alpha_agent"}
+    text = "A: {{ project_name }}, B: {{project_name}}, C: {{   project_name_snake   }}"
+    rendered = engine.render_content(text, ctx)
+    assert rendered == "A: alpha-agent, B: alpha-agent, C: alpha_agent"
+
+
+def test_scaffolding_infra_resilience_contracts():
+    """Verify minio-setup retry loops, OpenSearch template engine (faiss), health retries, and run warnings."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="resilience-bot",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="react-vite",
+        )
+
+        # 1. docker-compose.yml minio-setup loop & minio healthcheck
+        dc_text = (project_dir / "docker-compose.yml").read_text(encoding="utf-8")
+        assert "until mc alias set" in dc_text
+        assert "mc mb --ignore-existing" in dc_text
+        assert "Bucket langfuse ready." in dc_text
+        assert "RETRY_COUNT=" in dc_text
+        assert "MAX_RETRIES=" in dc_text
+        assert "wget -qO-" in dc_text
+
+        # 2. init-opensearch.sh error on missing template and health retry bound
+        sh_text = (project_dir / "config" / "opensearch" / "init-opensearch.sh").read_text(encoding="utf-8")
+        assert 'if [ ! -f "${INDEX_TEMPLATE_FILE}" ]; then' in sh_text
+        assert "exit 1" in sh_text
+        assert "--fail-with-body" in sh_text
+        assert "HEALTH_MAX_RETRIES=30" in sh_text
+        assert "Timed out waiting for OpenSearch cluster health" in sh_text
+
+        # 3. agent-index-template.json uses faiss engine
+        tpl_text = (project_dir / "config" / "opensearch" / "agent-index-template.json").read_text(encoding="utf-8")
+        assert '"engine": "faiss"' in tpl_text
+
+        # 4. run.sh and run.bat daemon diagnostic feedback
+        run_sh_text = (project_dir / "run.sh").read_text(encoding="utf-8")
+        assert "Docker is installed but the Docker daemon is not running" in run_sh_text
+        run_bat_text = (project_dir / "run.bat").read_text(encoding="utf-8")
+        assert "Docker is installed but the Docker daemon is not running" in run_bat_text
+
+

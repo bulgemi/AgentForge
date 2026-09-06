@@ -1,13 +1,16 @@
-version: '3.8'
-
 services:
+  # ---------------------------------------------------------------------------
+  # 1. Core Relational Database (PostgreSQL 16)
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: {{ project_name }}-postgres
+    profiles: ["infra", "all"]
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
       POSTGRES_DB: {{ project_name_snake }}
+      POSTGRES_INITDB_ARGS: -c max_connections=500
     ports:
       - "5432:5432"
     volumes:
@@ -17,11 +20,17 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # 2. In-Memory Cache & Session Store (Redis 7.4)
+  # ---------------------------------------------------------------------------
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: {{ project_name }}-redis
+    profiles: ["infra", "all"]
     ports:
       - "6379:6379"
     volumes:
@@ -30,32 +39,254 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # 3. Langfuse v3 Observability Stack (ClickHouse, MinIO, Web, Worker)
+  # ---------------------------------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: {{ project_name }}-clickhouse
+    profiles: ["infra", "observability", "all"]
+    environment:
+      CLICKHOUSE_DB: langfuse
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: password
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--password", "password", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    container_name: {{ project_name }}-minio
+    profiles: ["infra", "observability", "all"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || curl -f http://localhost:9000/minio/health/live || wget -qO- http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  minio-setup:
+    image: minio/mc:RELEASE.2024-09-16T17-43-14Z
+    container_name: {{ project_name }}-minio-setup
+    profiles: ["infra", "observability", "all"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      RETRY_COUNT=0;
+      MAX_RETRIES=30;
+      until mc alias set local http://minio:9000 minioadmin minioadmin && mc mb --ignore-existing local/langfuse; do
+        RETRY_COUNT=\$$((RETRY_COUNT + 1));
+        if [ \"\$$RETRY_COUNT\" -ge \"\$$MAX_RETRIES\" ]; then
+          echo '[MinIO Setup] Error: Timed out waiting for MinIO bucket readiness.' >&2;
+          exit 1;
+        fi;
+        echo '[MinIO Setup] Waiting for MinIO service and bucket readiness...';
+        sleep 2;
+      done;
+      echo '[MinIO Setup] Bucket langfuse ready.';
+      exit 0;
+      "
+    restart: on-failure
+
+  langfuse:
+    image: langfuse/langfuse:3
+    container_name: {{ project_name }}-langfuse
+    profiles: ["infra", "observability", "all"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+      clickhouse:
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-{{ project_name }}-langfuse-secret-dev}
+      SALT: ${LANGFUSE_SALT:-{{ project_name }}-langfuse-salt-dev}
+      NEXTAUTH_URL: ${LANGFUSE_NEXTAUTH_URL:-http://localhost:3000}
+      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY_ENABLED:-false}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      CLICKHOUSE_URL: http://default:password@clickhouse:8123/langfuse
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:password@clickhouse:9000/langfuse
+      CLICKHOUSE_DB: langfuse
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: otel/
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minioadmin
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health || wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/public/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: {{ project_name }}-langfuse-worker
+    profiles: ["infra", "observability", "all"]
+    depends_on:
+      langfuse:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-{{ project_name }}-langfuse-secret-dev}
+      SALT: ${LANGFUSE_SALT:-{{ project_name }}-langfuse-salt-dev}
+      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY_ENABLED:-false}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      CLICKHOUSE_URL: http://default:password@clickhouse:8123/langfuse
+      CLICKHOUSE_DB: langfuse
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: otel/
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minioadmin
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # 4. Search & Vector Engine (OpenSearch 2.19.3 & Dashboards)
+  # ---------------------------------------------------------------------------
+  opensearch:
+    image: opensearchproject/opensearch:2.19.3
+    container_name: {{ project_name }}-opensearch
+    profiles: ["infra", "search", "audit", "all"]
+    environment:
+      discovery.type: single-node
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --fail --silent http://localhost:9200/_cluster/health?wait_for_status=yellow\&timeout=5s >/dev/null
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  opensearch-init:
+    image: curlimages/curl:8.14.1
+    container_name: {{ project_name }}-opensearch-init
+    profiles: ["infra", "search", "audit", "all"]
+    entrypoint:
+      - /bin/sh
+      - /config/init-opensearch.sh
+    environment:
+      OPENSEARCH_URL: http://opensearch:9200
+      INDEX_TEMPLATE_NAME: {{ project_name_snake }}-template
+      INDEX_TEMPLATE_FILE: /config/agent-index-template.json
+    volumes:
+      - ./config/opensearch:/config:ro
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    restart: on-failure
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.3
+    container_name: {{ project_name }}-opensearch-dashboards
+    profiles: ["infra", "search", "audit", "all"]
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+      SERVER_HOST: 0.0.0.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+      opensearch-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # 5. Application Services (Backend & Frontend)
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: {{ project_name }}-backend
+    profiles: ["app", "all"]
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/{{ project_name_snake }}
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/{{ project_name_snake }}
       REDIS_URL: redis://redis:6379/0
+      OPENSEARCH_URL: http://opensearch:9200
+      LANGFUSE_BASE_URL: http://langfuse:3000
       JWT_SECRET_KEY: {{ project_name }}-super-secret-jwt-key
     depends_on:
       postgres:
         condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
+        required: false
 
   frontend:
     build:
       context: ./frontend
       dockerfile: docker/Dockerfile
     container_name: {{ project_name }}-frontend
+    profiles: ["app", "all"]
     ports:
       - "5173:80"
     depends_on:
@@ -64,3 +295,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  clickhouse_data:
+  minio_data:
+  opensearch_data:

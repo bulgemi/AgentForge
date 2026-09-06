@@ -309,6 +309,50 @@ class BaseAppSettings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # 8. OpenSearch Settings
+    # -------------------------------------------------------------------------
+    opensearch_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_URL"),
+        description="Full OpenSearch endpoint URL. If omitted, built from components.",
+    )
+    opensearch_host: str = Field(
+        default="localhost",
+        validation_alias=AliasChoices("OPENSEARCH_HOST"),
+        description="OpenSearch server host or IP",
+    )
+    opensearch_port: int = Field(
+        default=9200,
+        validation_alias=AliasChoices("OPENSEARCH_PORT"),
+        description="OpenSearch server port",
+    )
+    opensearch_username: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_USERNAME", "OPENSEARCH_USER"),
+        description="OpenSearch authentication username",
+    )
+    opensearch_password: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_PASSWORD"),
+        description="OpenSearch authentication password",
+    )
+    opensearch_use_ssl: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OPENSEARCH_USE_SSL", "OPENSEARCH_SSL"),
+        description="Enable SSL/TLS for OpenSearch connection",
+    )
+    opensearch_verify_certs: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OPENSEARCH_VERIFY_CERTS"),
+        description="Verify SSL certificates for OpenSearch",
+    )
+    opensearch_index_prefix: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_INDEX_PREFIX"),
+        description="Prefix for OpenSearch indices",
+    )
+
+    # -------------------------------------------------------------------------
     # Validators
     # -------------------------------------------------------------------------
     @field_validator("environment", mode="before")
@@ -369,6 +413,83 @@ class BaseAppSettings(BaseSettings):
         scheme = "rediss" if self.redis_ssl else "redis"
         auth = f":{self.redis_password}@" if self.redis_password else ""
         return f"{scheme}://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def resolved_opensearch_url(self) -> str:
+        """Construct the OpenSearch URL if not explicitly configured."""
+        if self.opensearch_url and self.opensearch_url.strip():
+            return self.opensearch_url.strip().rstrip("/")
+
+        raw_host = (self.opensearch_host or "").strip()
+        if not raw_host:
+            raw_host = "localhost"
+
+        scheme = "https" if self.opensearch_use_ssl else "http"
+
+        if raw_host.startswith("https://"):
+            scheme = "https"
+            raw_host = raw_host[8:]
+        elif raw_host.startswith("http://"):
+            scheme = "http"
+            raw_host = raw_host[7:]
+
+        # Strip fragment, query parameters, and trailing path
+        raw_host = raw_host.split("#")[0].split("?")[0].split("/")[0]
+
+        # Extract embedded userinfo if present (e.g. user:pass@host)
+        extracted_user = None
+        extracted_pass = None
+        if "@" in raw_host:
+            auth_part, host_part = raw_host.rsplit("@", 1)
+            raw_host = host_part
+            if ":" in auth_part:
+                extracted_user, extracted_pass = auth_part.split(":", 1)
+            else:
+                extracted_user = auth_part
+
+        username = self.opensearch_username if self.opensearch_username is not None else extracted_user
+        password = self.opensearch_password if self.opensearch_password is not None else extracted_pass
+
+        # Handle bracketed IPv6, unbracketed IPv6, and hostname:port
+        if raw_host.startswith("["):
+            if "]:" in raw_host:
+                parts = raw_host.split("]:", 1)
+                host = parts[0] + "]"
+                try:
+                    port = int(parts[1])
+                except ValueError:
+                    port = self.opensearch_port
+            else:
+                host = raw_host
+                port = self.opensearch_port
+        elif raw_host.count(":") > 1:
+            # Unbracketed IPv6 address: wrap in brackets per RFC 3986
+            host = f"[{raw_host}]"
+            port = self.opensearch_port
+        elif ":" in raw_host:
+            parts = raw_host.split(":", 1)
+            host = parts[0]
+            try:
+                port = int(parts[1])
+            except ValueError:
+                port = self.opensearch_port
+        else:
+            host = raw_host
+            port = self.opensearch_port
+
+        if not host:
+            host = "localhost"
+
+        if username and password:
+            auth = f"{username}:{password}@"
+        elif username:
+            auth = f"{username}@"
+        elif password:
+            auth = f":{password}@"
+        else:
+            auth = ""
+
+        return f"{scheme}://{auth}{host}:{port}"
 
 
 @lru_cache()

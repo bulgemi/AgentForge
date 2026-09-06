@@ -774,6 +774,9 @@ def test_base_app_settings_defaults():
     assert settings.mcp_server_name == "agentforge-mcp"
     assert settings.langfuse_enabled is False
     assert settings.langfuse_base_url == "http://localhost:3000"
+    assert settings.opensearch_host == "localhost"
+    assert settings.opensearch_port == 9200
+    assert settings.opensearch_use_ssl is False
     assert settings.timeout == 60.0
     assert settings.max_retries == 3
 
@@ -800,7 +803,7 @@ def test_base_app_settings_cors_origins_parsing():
 
 
 def test_base_app_settings_resolved_urls():
-    """Verify resolved_database_url and resolved_redis_url dynamic assembly."""
+    """Verify resolved_database_url, resolved_redis_url, and resolved_opensearch_url dynamic assembly."""
     settings = BaseAppSettings(
         database_driver="sqlite",
         database_url=None,
@@ -808,9 +811,153 @@ def test_base_app_settings_resolved_urls():
         redis_port=6380,
         redis_password="secretpassword",
         redis_db=2,
+        opensearch_host="opensearch.internal",
+        opensearch_port=9201,
+        opensearch_username="admin",
+        opensearch_password="secretpassword",
     )
     assert "sqlite:///./agentforge.db" in settings.resolved_database_url
     assert settings.resolved_redis_url == "redis://:secretpassword@redis.internal:6380/2"
+    assert settings.resolved_opensearch_url == "http://admin:secretpassword@opensearch.internal:9201"
+
+    # Default OpenSearch URL
+    default_settings = BaseAppSettings()
+    assert default_settings.resolved_opensearch_url == "http://localhost:9200"
+
+    # Explicit OpenSearch URL override
+    explicit_settings = BaseAppSettings(opensearch_url="https://custom-opensearch.domain:9200")
+    assert explicit_settings.resolved_opensearch_url == "https://custom-opensearch.domain:9200"
+
+    # SSL and username-only
+    ssl_settings = BaseAppSettings(
+        opensearch_host="secure-es",
+        opensearch_port=9243,
+        opensearch_use_ssl=True,
+        opensearch_username="es_user",
+    )
+    assert ssl_settings.resolved_opensearch_url == "https://es_user@secure-es:9243"
+
+    # SSL with username and password
+    ssl_auth_settings = BaseAppSettings(
+        opensearch_host="secure-es",
+        opensearch_port=9243,
+        opensearch_use_ssl=True,
+        opensearch_username="es_user",
+        opensearch_password="es_password",
+    )
+    assert ssl_auth_settings.resolved_opensearch_url == "https://es_user:es_password@secure-es:9243"
+
+    # SSL without credentials
+    ssl_no_auth = BaseAppSettings(
+        opensearch_host="secure-es",
+        opensearch_port=9243,
+        opensearch_use_ssl=True,
+    )
+    assert ssl_no_auth.resolved_opensearch_url == "https://secure-es:9243"
+
+    # Custom host and port without auth
+    custom_host_settings = BaseAppSettings(
+        opensearch_host="es.local",
+        opensearch_port=9205,
+    )
+    assert custom_host_settings.resolved_opensearch_url == "http://es.local:9205"
+
+    # Edge cases: Password-only authentication (token/api-key)
+    pwd_only_settings = BaseAppSettings(opensearch_password="secretpassword")
+    assert pwd_only_settings.resolved_opensearch_url == "http://:secretpassword@localhost:9200"
+
+    # Edge cases: Host containing port already
+    host_port_settings = BaseAppSettings(opensearch_host="es.internal:9200")
+    assert host_port_settings.resolved_opensearch_url == "http://es.internal:9200"
+
+    # Edge cases: Host containing scheme
+    host_scheme_settings = BaseAppSettings(opensearch_host="https://es.internal")
+    assert host_scheme_settings.resolved_opensearch_url == "https://es.internal:9200"
+
+    # Edge cases: Host containing scheme and port
+    host_scheme_port = BaseAppSettings(opensearch_host="https://es.internal:9243")
+    assert host_scheme_port.resolved_opensearch_url == "https://es.internal:9243"
+
+    # Edge cases: URL with surrounding whitespace
+    whitespace_url_settings = BaseAppSettings(opensearch_url="  https://custom-opensearch.domain:9200  ")
+    assert whitespace_url_settings.resolved_opensearch_url == "https://custom-opensearch.domain:9200"
+
+    # Edge cases: Empty string URL falls back to component assembly
+    empty_url_settings = BaseAppSettings(opensearch_url="")
+    assert empty_url_settings.resolved_opensearch_url == "http://localhost:9200"
+
+    # Edge cases: IPv6 addresses (bracketed with port, bracketed without port, unbracketed)
+    ipv6_bracketed_port = BaseAppSettings(opensearch_host="[::1]:9200")
+    assert ipv6_bracketed_port.resolved_opensearch_url == "http://[::1]:9200"
+
+    ipv6_bracketed_no_port = BaseAppSettings(opensearch_host="[::1]")
+    assert ipv6_bracketed_no_port.resolved_opensearch_url == "http://[::1]:9200"
+
+    ipv6_unbracketed = BaseAppSettings(opensearch_host="::1")
+    assert ipv6_unbracketed.resolved_opensearch_url == "http://[::1]:9200"
+
+    ipv6_ssl_auth = BaseAppSettings(
+        opensearch_host="[2001:db8::1]:9243",
+        opensearch_use_ssl=True,
+        opensearch_username="admin",
+        opensearch_password="secretpassword",
+    )
+    assert ipv6_ssl_auth.resolved_opensearch_url == "https://admin:secretpassword@[2001:db8::1]:9243"
+
+    ipv6_unbracketed_ssl = BaseAppSettings(
+        opensearch_host="2001:db8::1",
+        opensearch_use_ssl=True,
+    )
+    assert ipv6_unbracketed_ssl.resolved_opensearch_url == "https://[2001:db8::1]:9200"
+
+    # Edge cases: Embedded userinfo in host (user:pass@host)
+    embedded_auth_with_port = BaseAppSettings(opensearch_host="esuser:espass@opensearch.cluster:9200")
+    assert embedded_auth_with_port.resolved_opensearch_url == "http://esuser:espass@opensearch.cluster:9200"
+
+    embedded_auth_no_port = BaseAppSettings(opensearch_host="esuser:espass@opensearch.cluster")
+    assert embedded_auth_no_port.resolved_opensearch_url == "http://esuser:espass@opensearch.cluster:9200"
+
+    embedded_auth_ipv6 = BaseAppSettings(opensearch_host="http://user:pass@[::1]:9200")
+    assert embedded_auth_ipv6.resolved_opensearch_url == "http://user:pass@[::1]:9200"
+
+    # Edge cases: Query strings, fragments, and invalid ports in opensearch_host
+    query_frag_settings = BaseAppSettings(opensearch_host="localhost:9200?timeout=10s#section")
+    assert query_frag_settings.resolved_opensearch_url == "http://localhost:9200"
+
+    invalid_port_settings = BaseAppSettings(opensearch_host="localhost:notanint")
+    assert invalid_port_settings.resolved_opensearch_url == "http://localhost:9200"
+
+    # Edge cases: Empty and whitespace-only opensearch_host
+    empty_host_settings = BaseAppSettings(opensearch_host="")
+    assert empty_host_settings.resolved_opensearch_url == "http://localhost:9200"
+
+    whitespace_host_settings = BaseAppSettings(opensearch_host="   ")
+    assert whitespace_host_settings.resolved_opensearch_url == "http://localhost:9200"
+
+    # Edge cases: opensearch_url with trailing slashes
+    trailing_slash_url_settings = BaseAppSettings(opensearch_url="  https://custom-opensearch.domain:9200/  ")
+    assert trailing_slash_url_settings.resolved_opensearch_url == "https://custom-opensearch.domain:9200"
+
+
+def test_base_app_settings_opensearch_env_aliases(monkeypatch):
+    """Verify BaseAppSettings reads OpenSearch configuration from environment variable aliases."""
+    monkeypatch.setenv("OPENSEARCH_HOST", "cluster.internal")
+    monkeypatch.setenv("OPENSEARCH_PORT", "9201")
+    monkeypatch.setenv("OPENSEARCH_USER", "secuser")
+    monkeypatch.setenv("OPENSEARCH_PASSWORD", "secpass")
+    monkeypatch.setenv("OPENSEARCH_SSL", "true")
+    monkeypatch.setenv("OPENSEARCH_VERIFY_CERTS", "true")
+    monkeypatch.setenv("OPENSEARCH_INDEX_PREFIX", "myagent")
+
+    settings = BaseAppSettings()
+    assert settings.opensearch_host == "cluster.internal"
+    assert settings.opensearch_port == 9201
+    assert settings.opensearch_username == "secuser"
+    assert settings.opensearch_password == "secpass"
+    assert settings.opensearch_use_ssl is True
+    assert settings.opensearch_verify_certs is True
+    assert settings.opensearch_index_prefix == "myagent"
+    assert settings.resolved_opensearch_url == "https://secuser:secpass@cluster.internal:9201"
 
 
 def test_get_settings_singleton():

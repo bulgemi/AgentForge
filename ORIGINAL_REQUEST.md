@@ -70,3 +70,49 @@ Integrity mode: development
 ### Quality & Verification
 - [ ] `pytest tests/` 실행 시 모든 프레임워크 테스트가 100% 통과함
 - [ ] 생성된 테스트 프로젝트의 파이썬 코드 컴파일 및 기본 임포트 테스트 에러 없음
+
+---
+
+## 2026-09-06T12:50:47Z
+
+This is a single self-contained feature implementation for AgentForge; keep it small and focused.
+Implement and verify local infrastructure support (PostgreSQL 16, Redis 7.4, Langfuse v3 full-stack, OpenSearch 2.19.3 & Dashboards) via Docker Compose profiles for generated AgentForge projects, matching the specifications in GitHub Issue #3.
+
+Working directory: /Users/a08126/geminiProjects/AgentForge
+Integrity mode: development
+
+## Requirements
+
+### R1. Single Docker Compose with Logical Profiles
+Provide a unified `docker-compose.yml` template defining logical Compose profiles (`infra`, `app`, `observability`, `search`, `audit`, `all`) covering:
+- PostgreSQL 16-alpine (dual DB provisioning: app DB and `langfuse` DB)
+- Redis 7.4-alpine (shared caching and session store)
+- Langfuse v3 stack (ClickHouse 24.3, MinIO S3 storage with auto bucket creation, Web, and Worker)
+- OpenSearch 2.19.3 (single-node, dev-optimized) & OpenSearch Dashboards
+- Automated OpenSearch index template provisioning (`opensearch-init`)
+- Backend & frontend application containers
+
+### R2. PostgreSQL Multi-Database Initialization
+Provide an idempotent database initialization script (`postgres-init/init.sql`) using `\gexec` conditional database creation to ensure both the application DB (`{{ project_name_snake }}`) and Langfuse DB (`langfuse`) are created with required extensions (`uuid-ossp`, `pgcrypto`).
+
+### R3. OpenSearch Index Template & Initialization
+Provide configuration files (`init-opensearch.sh`, `agent-index-template.json`) under `config/opensearch/` that wait for cluster health and register standard k-NN (1536-dim HNSW cosine), full-text search, and audit/trace log mappings for `{{ project_name_snake }}-*` indices.
+
+### R4. Core Configuration & Environment Integration
+Extend `BaseAppSettings` in `agentforge/core/config.py` with OpenSearch configuration fields and dynamic `resolved_opensearch_url` assembly. Synchronize backend `.env` and `.env.sample` templates with OpenSearch and Langfuse default connection variables.
+
+### R5. Scaffolding Engine & Developer Experience
+Update `ScaffoldingEngine` (`engine.py`) to properly substitute template tokens in `.sql` files and copy infrastructure config directories. Enhance `run.sh` and `run.bat` scripts to detect Docker and start infrastructure containers (`docker compose --profile infra up -d`), displaying service URLs in the terminal.
+
+## Acceptance Criteria
+
+### Infrastructure & Templates
+- [ ] `docker-compose.yml` template contains all 9 infrastructure services and 2 application services with designated profiles.
+- [ ] `postgres-init/init.sql` successfully provisions both databases without failing on re-runs.
+- [ ] OpenSearch init script has execution permissions and registers index template `{{ project_name_snake }}-template`.
+- [ ] `run.sh` and `run.bat` include Docker daemon detection and launch `docker compose --profile infra up -d`.
+
+### Core Settings & Tests
+- [ ] `BaseAppSettings.resolved_opensearch_url` dynamically constructs valid HTTP/HTTPS URLs with and without authentication.
+- [ ] Scaffolding generation test (`test_scaffolding_engine_full_generation`) verifies creation of all docker compose services, postgres-init sql, opensearch configs, and env variables.
+- [ ] All automated tests pass (`uv run pytest`).
