@@ -254,10 +254,12 @@ Press **F5** or navigate to the **Run and Debug** view (`Ctrl+Shift+D` / `Cmd+Sh
 
 ### 3. Manage Infrastructure with Docker Compose
 
+> **Important**: All services use Docker Compose profiles. Running `docker compose up -d` without `--profile` will result in `no service selected`. Always specify `--profile infra` (recommended for local development) or `--profile all`.
+
 Start specific stacks using Docker Compose profiles:
 
 ```bash
-# 1. Start all infrastructure (PostgreSQL, Redis, Langfuse v3, OpenSearch)
+# 1. Start all infrastructure (Recommended: PostgreSQL, Redis, Langfuse v3, OpenSearch)
 docker compose --profile infra up -d
 
 # 2. Start observability stack only (Langfuse Web, Worker, ClickHouse, MinIO)

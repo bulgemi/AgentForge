@@ -565,10 +565,16 @@ AgentForge로 생성된 프로젝트는 [pay](https://github.com/Seorin25F/pay) 
 
 ### 2. 프로파일별 실행 및 관리 명령어
 
+> [!IMPORTANT]
+> **`--profile` 플래그 명시 필수 안내 (권장 실행법)**  
+> AgentForge의 `docker-compose.yml`에 정의된 모든 서비스는 목적별 프로파일(`infra`, `observability`, `search`, `audit`, `app`, `all`)로 격리되어 있습니다.  
+> 따라서 프로파일 플래그 없이 단순 `docker compose up -d`를 실행하면 활성화된 기본 서비스가 없어 **`no service selected`** 에러가 발생합니다.  
+> **로컬 인프라를 시작할 때는 반드시 `--profile <이름>` (예: `--profile infra` 또는 `--profile all`) 플래그를 명시하여 실행해야 합니다.**
+
 프로젝트 루트에서 `docker compose --profile <이름>` 명령어로 원하는 스택을 제어할 수 있습니다.
 
 ```bash
-# 1. 핵심 인프라 전체 시작 (Postgres, Redis, Langfuse v3 풀스택, OpenSearch)
+# 1. 핵심 인프라 전체 시작 (권장: Postgres, Redis, Langfuse v3 풀스택, OpenSearch)
 docker compose --profile infra up -d
 
 # 2. LLM 관측성 스택만 시작 (Langfuse Web, Worker, ClickHouse, MinIO)
