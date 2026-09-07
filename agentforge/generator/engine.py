@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -213,6 +214,9 @@ class ScaffoldingEngine:
             gi_content = gitignore_tpl.read_text(encoding="utf-8")
             dest_gitignore.write_text(self.render_content(gi_content, context), encoding="utf-8")
 
+        # 6.1 Generate VS Code Launch and Settings configurations (.vscode/launch.json, settings.json)
+        self._generate_vscode_configs(dest_root, clean_frontend)
+
         readme_path = dest_root / "README.md"
         if not readme_path.exists():
             readme_content = f"""# {clean_name} ⚡
@@ -242,7 +246,13 @@ run.bat
 
 > **Tip**: To install dependencies only without starting servers, run `./setup.sh` or `setup.bat`.
 
-### 2. Manage Infrastructure with Docker Compose
+### 2. VS Code One-Click Launch & Debug (F5)
+Press **F5** or navigate to the **Run and Debug** view (`Ctrl+Shift+D` / `Cmd+Shift+D`):
+- **Fullstack: Backend + Frontend**: Launches both backend (FastAPI uvicorn) and frontend dev server simultaneously.
+- **Backend: FastAPI (uvicorn)**: Debug FastAPI backend with breakpoint support.
+- **Frontend: Vite Dev Server**: Start frontend with automatic browser launching.
+
+### 3. Manage Infrastructure with Docker Compose
 
 Start specific stacks using Docker Compose profiles:
 
@@ -260,7 +270,7 @@ docker compose --profile search up -d
 docker compose --profile all up -d
 ```
 
-### 3. Service Dashboard & URLs
+### 4. Service Dashboard & URLs
 - **Frontend (Chat)**: http://localhost:5173
 - **Frontend (Admin)**: http://localhost:5173/admin.html
 - **Backend API Docs**: http://localhost:8000/docs
@@ -268,7 +278,7 @@ docker compose --profile all up -d
 - **OpenSearch Dashboards**: http://localhost:5601
 - **OpenSearch API**: http://localhost:9200
 
-### 4. Manual Run Locally
+### 5. Manual Run Locally
 ```bash
 # Backend
 cd backend
@@ -286,3 +296,115 @@ npm run dev
         validate_generated_project(dest_root)
 
         return dest_root
+
+    def _generate_vscode_configs(self, dest_root: Path, frontend: str) -> None:
+        """Generate .vscode/launch.json and .vscode/settings.json configurations."""
+        vscode_dir = dest_root / ".vscode"
+        vscode_dir.mkdir(parents=True, exist_ok=True)
+
+        backend_config: dict[str, Any] = {
+            "name": "Backend: FastAPI (uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/backend/.venv/bin/python",
+            "windows": {
+                "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+            },
+            "module": "uvicorn",
+            "args": [
+                "src.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000",
+                "--reload"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "envFile": "${workspaceFolder}/backend/.env",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src:${workspaceFolder}/backend"
+            },
+            "jinja": True,
+            "justMyCode": False,
+            "console": "integratedTerminal"
+        }
+
+        configurations: list[dict[str, Any]] = [backend_config]
+        compounds: list[dict[str, Any]] = []
+
+        if frontend in ("react", "react-vite"):
+            frontend_config: dict[str, Any] = {
+                "name": "Frontend: Vite Dev Server",
+                "type": "node-terminal",
+                "request": "launch",
+                "command": "npm run dev",
+                "cwd": "${workspaceFolder}/frontend",
+                "envFile": "${workspaceFolder}/frontend/.env",
+                "serverReadyAction": {
+                    "pattern": "Local:\\s+(https?://\\S+)",
+                    "uriFormat": "%s",
+                    "action": "openExternally"
+                }
+            }
+            configurations.append(frontend_config)
+            compounds.append({
+                "name": "Fullstack: Backend + Frontend",
+                "configurations": [
+                    "Backend: FastAPI (uvicorn)",
+                    "Frontend: Vite Dev Server"
+                ],
+                "stopAll": True
+            })
+        elif frontend == "streamlit":
+            frontend_config = {
+                "name": "Frontend: Streamlit UI",
+                "type": "debugpy",
+                "request": "launch",
+                "python": "${workspaceFolder}/backend/.venv/bin/python",
+                "windows": {
+                    "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+                },
+                "module": "streamlit",
+                "args": [
+                    "run",
+                    "app.py"
+                ],
+                "cwd": "${workspaceFolder}/frontend",
+                "envFile": "${workspaceFolder}/backend/.env",
+                "console": "integratedTerminal"
+            }
+            configurations.append(frontend_config)
+            compounds.append({
+                "name": "Fullstack: Backend + Frontend",
+                "configurations": [
+                    "Backend: FastAPI (uvicorn)",
+                    "Frontend: Streamlit UI"
+                ],
+                "stopAll": True
+            })
+
+        launch_data: dict[str, Any] = {
+            "version": "0.2.0",
+            "configurations": configurations
+        }
+        if compounds:
+            launch_data["compounds"] = compounds
+
+        launch_file = vscode_dir / "launch.json"
+        if not launch_file.exists():
+            launch_file.write_text(json.dumps(launch_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        settings_data: dict[str, Any] = {
+            "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+            "python.analysis.extraPaths": [
+                "${workspaceFolder}/backend",
+                "${workspaceFolder}/backend/src"
+            ],
+            "python.autoComplete.extraPaths": [
+                "${workspaceFolder}/backend",
+                "${workspaceFolder}/backend/src"
+            ]
+        }
+        settings_file = vscode_dir / "settings.json"
+        if not settings_file.exists():
+            settings_file.write_text(json.dumps(settings_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
