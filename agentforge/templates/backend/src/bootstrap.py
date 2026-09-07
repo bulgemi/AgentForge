@@ -47,7 +47,10 @@ def create_agent_app(agent_adapter: Any = None) -> FastAPI:
         finally:
             logger.info("Shutting down AgentForge backend application...")
             await runtime.close()
-            await db.dispose()
+            if hasattr(db, "dispose"):
+                await db.dispose()
+            elif hasattr(db, "aclose"):
+                await db.aclose()
 
     app = FastAPI(
         title="{{ project_name }} API",

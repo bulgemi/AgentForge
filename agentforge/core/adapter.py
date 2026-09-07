@@ -251,8 +251,10 @@ class BaseAgentAdapter(ABC):
     All concrete adapters must inherit from this class.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> None:
         self.config: Dict[str, Any] = config or {}
+        if kwargs:
+            self.config.update(kwargs)
         self._is_initialized: bool = False
 
     async def initialize(self) -> None:
