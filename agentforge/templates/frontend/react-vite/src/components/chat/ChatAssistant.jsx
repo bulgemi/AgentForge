@@ -76,29 +76,53 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
         buffer = lines.pop() || '';
 
         for (const block of lines) {
+          if (!block.trim()) continue;
           const blockLines = block.split('\n');
           let eventType = 'token';
-          let eventData = '';
+          const dataLines = [];
+
           for (const line of blockLines) {
-            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-            if (line.startsWith('data: ')) eventData = line.slice(6).trim();
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+              dataLines.push(line.slice(6));
+            }
+          }
+
+          const rawData = dataLines.join('\n').trim();
+          if (!rawData && eventType !== 'done') continue;
+
+          let parsedPayload = null;
+          try {
+            parsedPayload = JSON.parse(rawData);
+          } catch {
+            // rawData is plain text
           }
 
           if (eventType === 'token') {
-            assistantMsg.content += eventData;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: assistantMsg.content } : m))
-            );
+            const tokenText = parsedPayload && typeof parsedPayload === 'object'
+              ? (parsedPayload.content ?? parsedPayload.data ?? '')
+              : rawData;
+
+            if (tokenText) {
+              assistantMsg.content += tokenText;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: assistantMsg.content } : m))
+              );
+            }
           } else if (eventType === 'meta') {
+            const metaText = parsedPayload && typeof parsedPayload === 'object'
+              ? (parsedPayload.data ? JSON.stringify(parsedPayload.data) : JSON.stringify(parsedPayload))
+              : rawData;
             setLogs((prev) => [
               ...prev,
-              { time: new Date().toLocaleTimeString(), text: `Meta: ${eventData}`, type: 'meta' },
+              { time: new Date().toLocaleTimeString(), text: `Meta: ${metaText}`, type: 'meta' },
             ]);
           } else if (eventType === 'interrupt') {
-            try {
-              const interruptObj = JSON.parse(eventData);
-              setPendingInterrupt(interruptObj);
-            } catch (err) {}
+            const interruptObj = (parsedPayload && typeof parsedPayload === 'object') ? parsedPayload : rawData;
+            setPendingInterrupt(interruptObj);
+          } else if (eventType === 'done') {
+            // Stream completed
           }
         }
       }

@@ -20,6 +20,12 @@ from src.bootstrap import create_agent_app
 # Default Framework Adapter selection
 def get_default_adapter():
     """Load framework adapter based on project scaffolding."""
+    try:
+        from src.infrastructure.adapters.agent.agent import ProjectAgentAdapter
+        return ProjectAgentAdapter(name="{{ project_name }}")
+    except Exception:
+        pass
+
     framework = "{{ framework }}"
     try:
         if framework == "langgraph":

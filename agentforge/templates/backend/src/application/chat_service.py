@@ -48,8 +48,10 @@ class ChatService:
 
         # 3. Stream from adapter
         async for chunk in self.agent_adapter.astream(agent_input):
-            if chunk.event.value == "token" and isinstance(chunk.data, str):
-                full_content.append(chunk.data)
+            if chunk.event.value == "token":
+                text = chunk.content if chunk.content is not None else (chunk.data if isinstance(chunk.data, str) else "")
+                if text:
+                    full_content.append(text)
             elif chunk.event.value == "interrupt":
                 # Save interrupt state
                 interrupt = InterruptState(
