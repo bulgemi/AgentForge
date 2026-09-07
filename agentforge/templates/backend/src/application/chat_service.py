@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, AsyncGenerator
-
-from ..core.adapter import AgentChunk, AgentInput, BaseAgentAdapter
+from ..core.adapter import (
+    AgentChunk,
+    AgentInput,
+    AgentMessage,
+    AgentRole,
+    BaseAgentAdapter,
+)
 from ..domain.entities.chat import ChatMessage, ChatSession, InterruptState, MessageRole
 from ..domain.ports.chat_repository import ChatRepositoryPort
 
@@ -28,7 +32,17 @@ class ChatService:
         session_id: str | None = None,
     ) -> AsyncGenerator[AgentChunk, None]:
         """Record user message and stream agent response chunks."""
-        # 1. Save user message
+        # 1. Fetch existing message history before saving new message
+        history = await self.chat_repo.get_messages(chat_id, limit=30)
+        messages_list: list[AgentMessage] = [
+            AgentMessage(
+                role=AgentRole.USER if m.role == MessageRole.USER else AgentRole.ASSISTANT,
+                content=m.content,
+            )
+            for m in history
+        ]
+
+        # 2. Save new user message
         user_msg = ChatMessage(
             id=str(uuid.uuid4()),
             chat_id=chat_id,
@@ -36,11 +50,14 @@ class ChatService:
             content=message,
         )
         await self.chat_repo.save_message(user_msg)
+        messages_list.append(AgentMessage(role=AgentRole.USER, content=message))
 
-        # 2. Build AgentInput
+        # 3. Build AgentInput
         agent_input = AgentInput(
             prompt=message,
+            messages=messages_list,
             session_id=session_id or chat_id,
+            chat_id=chat_id,
             user_id=user_id,
         )
 
