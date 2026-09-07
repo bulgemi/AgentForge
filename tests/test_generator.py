@@ -601,6 +601,97 @@ def test_existing_generated_project_af_test001():
     assert str(init_py) in verify_import.stdout
 
 
+def test_vscode_config_react_vite():
+    import json
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="vscode-react-test",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="react-vite",
+        )
+
+        vscode_dir = project_dir / ".vscode"
+        assert vscode_dir.is_dir()
+
+        launch_file = vscode_dir / "launch.json"
+        assert launch_file.is_file()
+        launch_data = json.loads(launch_file.read_text(encoding="utf-8"))
+
+        assert launch_data.get("version") == "0.2.0"
+        configs = launch_data.get("configurations", [])
+        config_names = [c["name"] for c in configs]
+        assert "Backend: FastAPI (uvicorn)" in config_names
+        assert "Frontend: Vite Dev Server" in config_names
+
+        backend_cfg = next(c for c in configs if c["name"] == "Backend: FastAPI (uvicorn)")
+        assert backend_cfg["type"] == "debugpy"
+        assert backend_cfg["python"] == "${workspaceFolder}/backend/.venv/bin/python"
+        assert backend_cfg["windows"]["python"] == "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+        assert "--port" in backend_cfg["args"]
+        assert "8000" in backend_cfg["args"]
+        assert backend_cfg["envFile"] == "${workspaceFolder}/backend/.env"
+
+        frontend_cfg = next(c for c in configs if c["name"] == "Frontend: Vite Dev Server")
+        assert frontend_cfg["type"] == "node-terminal"
+        assert frontend_cfg["command"] == "npm run dev"
+        assert "serverReadyAction" in frontend_cfg
+
+        compounds = launch_data.get("compounds", [])
+        assert len(compounds) == 1
+        assert compounds[0]["name"] == "Fullstack: Backend + Frontend"
+        assert "Backend: FastAPI (uvicorn)" in compounds[0]["configurations"]
+        assert "Frontend: Vite Dev Server" in compounds[0]["configurations"]
+
+        settings_file = vscode_dir / "settings.json"
+        assert settings_file.is_file()
+        settings_data = json.loads(settings_file.read_text(encoding="utf-8"))
+        assert settings_data["python.defaultInterpreterPath"] == "${workspaceFolder}/backend/.venv/bin/python"
+        assert "${workspaceFolder}/backend/src" in settings_data["python.analysis.extraPaths"]
 
 
+def test_vscode_config_streamlit():
+    import json
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="vscode-streamlit-test",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="streamlit",
+        )
 
+        launch_file = project_dir / ".vscode" / "launch.json"
+        assert launch_file.is_file()
+        launch_data = json.loads(launch_file.read_text(encoding="utf-8"))
+
+        config_names = [c["name"] for c in launch_data.get("configurations", [])]
+        assert "Backend: FastAPI (uvicorn)" in config_names
+        assert "Frontend: Streamlit UI" in config_names
+
+        compounds = launch_data.get("compounds", [])
+        assert len(compounds) == 1
+        assert compounds[0]["name"] == "Fullstack: Backend + Frontend"
+        assert "Frontend: Streamlit UI" in compounds[0]["configurations"]
+
+
+def test_vscode_config_none():
+    import json
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="vscode-none-test",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="none",
+        )
+
+        launch_file = project_dir / ".vscode" / "launch.json"
+        assert launch_file.is_file()
+        launch_data = json.loads(launch_file.read_text(encoding="utf-8"))
+
+        config_names = [c["name"] for c in launch_data.get("configurations", [])]
+        assert "Backend: FastAPI (uvicorn)" in config_names
+        assert len(config_names) == 1
+        assert "compounds" not in launch_data
