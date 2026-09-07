@@ -695,3 +695,40 @@ def test_vscode_config_none():
         assert "Backend: FastAPI (uvicorn)" in config_names
         assert len(config_names) == 1
         assert "compounds" not in launch_data
+
+
+def test_backend_dependencies_and_app_initialization():
+    """Verify backend dependencies include email-validator and python-multipart and app initializes."""
+    import subprocess
+    import sys
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="app-init-test",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="react-vite",
+        )
+
+        backend_pyproject = project_dir / "backend" / "pyproject.toml"
+        assert backend_pyproject.is_file()
+        content = backend_pyproject.read_text(encoding="utf-8")
+        assert "email-validator>=" in content
+        assert "python-multipart>=" in content
+
+        # Run python script verifying app loads with valid DTOs and routes
+        backend_dir = project_dir / "backend"
+        env = os.environ.copy()
+        env["PYTHONPATH"] = f"{backend_dir}/src:{backend_dir}"
+        result = subprocess.run(
+            [sys.executable, "-c", "from src.main import app; assert app.title == 'app-init-test API'; print('OK')"],
+            cwd=str(backend_dir),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        assert result.returncode == 0, f"App import failed: STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+        assert "OK" in result.stdout
+
