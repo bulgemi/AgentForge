@@ -55,7 +55,7 @@ if command -v uv >/dev/null 2>&1; then
     if [ ! -d ".venv" ]; then
         uv venv .venv
     fi
-    uv pip install -e ".[dev]"
+    uv pip install --python .venv -e ".[dev]"
 else
     echo -e "${YELLOW}ℹ uv not found, using standard venv and pip.${NC}"
     if [ ! -d ".venv" ]; then

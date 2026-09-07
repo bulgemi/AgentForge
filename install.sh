@@ -52,7 +52,7 @@ if command -v uv >/dev/null 2>&1; then
         uv venv .venv
     fi
     echo -e "${CYAN}Installing AgentForge in editable mode with development dependencies...${NC}"
-    uv pip install -e ".[dev]"
+    uv pip install --python .venv -e ".[dev]"
 else
     echo -e "${YELLOW}ℹ uv not found. Falling back to standard python venv and pip.${NC}"
     if [ ! -d ".venv" ]; then
