@@ -3,8 +3,10 @@ import { Send, Bot, User, Sparkles, Terminal as TerminalIcon } from 'lucide-reac
 import { InterruptApprovalCard } from './InterruptApprovalCard';
 import { TerminalConsole } from './TerminalConsole';
 import { API_BASE } from '../../api/client';
+import { useAuth } from '../../auth/AuthProvider';
 
 export function ChatAssistant({ chatId = 'default-chat' }) {
+  const { logout } = useAuth() || {};
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -43,6 +45,17 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
         },
         body: JSON.stringify({ message: userMessage.content }),
       });
+
+      if (response.status === 401) {
+        if (logout) {
+          logout();
+        } else {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          window.location.reload();
+        }
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
@@ -101,14 +114,28 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
 
   const handleResolveInterrupt = async (interruptId, decision) => {
     const token = localStorage.getItem('access_token');
-    await fetch(`${API_BASE}/chats/${chatId}/interrupts/${interruptId}/resolve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ decision }),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/chats/${chatId}/interrupts/${interruptId}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ decision }),
+      });
+      if (res.status === 401) {
+        if (logout) {
+          logout();
+        } else {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          window.location.reload();
+        }
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to resolve interrupt:', err);
+    }
     setPendingInterrupt(null);
   };
 
