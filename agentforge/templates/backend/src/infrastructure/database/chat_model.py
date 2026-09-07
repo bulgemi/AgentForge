@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Sequence
 from sqlmodel import Field, SQLModel, select
+from sqlalchemy import DateTime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domain.entities.chat import ChatMessage, ChatSession, InterruptState, MessageRole
@@ -20,8 +21,14 @@ class ChatSessionTable(SQLModel, table=True):
     user_id: str = Field(index=True, nullable=False)
     title: str = Field(default="New Conversation")
     active_interrupt_json: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True),
+    )
 
 
 class ChatMessageTable(SQLModel, table=True):
@@ -32,7 +39,10 @@ class ChatMessageTable(SQLModel, table=True):
     role: str = Field(index=True, nullable=False)
     content: str = Field(nullable=False)
     metadata_json: str | None = Field(default="{}")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True),
+    )
 
 
 class SQLModelChatRepository(ChatRepositoryPort):

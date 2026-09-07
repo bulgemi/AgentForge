@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, Sequence
 from sqlmodel import Field, SQLModel, select
+from sqlalchemy import DateTime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domain.entities.user import User, UserRole, UserStatus
@@ -21,8 +22,14 @@ class UserTable(SQLModel, table=True):
     role: str = Field(default="user", index=True)
     status: str = Field(default="active", index=True)
     failed_login_attempts: int = Field(default=0)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True),
+    )
 
 
 class SQLModelUserRepository(UserRepositoryPort):
@@ -50,9 +57,9 @@ class SQLModelUserRepository(UserRepositoryPort):
 
         pwd_hash = getattr(user, "password_hash", None)
 
-        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
-        c_at = user.created_at.replace(tzinfo=None) if (user.created_at and user.created_at.tzinfo) else (user.created_at or now_naive)
-        u_at = user.updated_at.replace(tzinfo=None) if (user.updated_at and user.updated_at.tzinfo) else (user.updated_at or now_naive)
+        now_utc = datetime.now(timezone.utc)
+        c_at = user.created_at if user.created_at else now_utc
+        u_at = user.updated_at if user.updated_at else now_utc
 
         if not existing:
             existing = UserTable(
@@ -75,7 +82,7 @@ class SQLModelUserRepository(UserRepositoryPort):
             existing.role = user.role.value if hasattr(user.role, "value") else str(user.role)
             existing.status = user.status.value if hasattr(user.status, "value") else str(user.status)
             existing.failed_login_attempts = user.failed_login_attempts
-            existing.updated_at = now_naive
+            existing.updated_at = now_utc
 
         await self.session.commit()
         await self.session.refresh(existing)
