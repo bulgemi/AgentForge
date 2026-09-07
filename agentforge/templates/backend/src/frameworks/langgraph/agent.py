@@ -35,6 +35,19 @@ except (ImportError, ValueError):
 logger = logging.getLogger(__name__)
 
 
+PROVIDER_CREDENTIAL_HINTS = {
+    "anthropic": "ANTHROPIC_API_KEY (또는 CLAUDE_API_KEY)",
+    "claude": "ANTHROPIC_API_KEY (또는 CLAUDE_API_KEY)",
+    "openai": "OPENAI_API_KEY",
+    "gpt": "OPENAI_API_KEY",
+    "gemini": "GOOGLE_API_KEY (또는 GEMINI_API_KEY)",
+    "google": "GOOGLE_API_KEY (또는 GEMINI_API_KEY)",
+    "bedrock": "AWS_ACCESS_KEY_ID 및 AWS_SECRET_ACCESS_KEY (또는 AWS IAM Role)",
+    "aws": "AWS_ACCESS_KEY_ID 및 AWS_SECRET_ACCESS_KEY (또는 AWS IAM Role)",
+    "aws-bedrock": "AWS_ACCESS_KEY_ID 및 AWS_SECRET_ACCESS_KEY (또는 AWS IAM Role)",
+}
+
+
 class AgentState(TypedDict):
     """LangGraph conversation state."""
     messages: Annotated[list[BaseMessage], add_messages]
@@ -91,7 +104,7 @@ class ProjectAgentAdapter(BaseAgentAdapter):
         # 3. Google Gemini
         elif provider in ("gemini", "google"):
             api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-            if not api_key or len(api_key.strip()) < 10:
+            if not api_key or api_key.startswith("your_") or len(api_key.strip()) < 10:
                 logger.warning("Google API key is not configured.")
                 return None
             model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash")
@@ -104,6 +117,35 @@ class ProjectAgentAdapter(BaseAgentAdapter):
                 )
             except Exception as e:
                 logger.error("Failed to initialize ChatGoogleGenerativeAI: %s", e)
+                return None
+
+        # 4. AWS Bedrock
+        elif provider in ("bedrock", "aws", "aws-bedrock"):
+            model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+            region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION", "ap-northeast-2")
+            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            aws_session_token = os.getenv("AWS_SESSION_TOKEN")
+
+            if not aws_access_key and not os.path.exists(os.path.expanduser("~/.aws/credentials")):
+                logger.warning("AWS credentials not found for Bedrock.")
+                return None
+
+            try:
+                from langchain_aws import ChatBedrockConverse
+                kwargs: dict[str, Any] = {
+                    "model": model_id,
+                    "region_name": region,
+                    "streaming": True,
+                }
+                if aws_access_key and aws_secret_key:
+                    kwargs["aws_access_key_id"] = aws_access_key
+                    kwargs["aws_secret_access_key"] = aws_secret_key
+                    if aws_session_token:
+                        kwargs["aws_session_token"] = aws_session_token
+                return ChatBedrockConverse(**kwargs)
+            except Exception as e:
+                logger.error("Failed to initialize ChatBedrockConverse: %s", e)
                 return None
 
         logger.warning("Unsupported or unconfigured LLM provider: %s", provider)
@@ -154,10 +196,12 @@ class ProjectAgentAdapter(BaseAgentAdapter):
     async def ainvoke(self, input_data: AgentInput, context: Optional[Any] = None) -> AgentOutput:
         llm = self._init_llm()
         if not llm:
+            provider = os.getenv("LLM_PROVIDER", "anthropic").lower().strip()
+            req_cred = PROVIDER_CREDENTIAL_HINTS.get(provider, "API 키")
             return AgentOutput(
                 content=(
-                    f"[{self.name}] LLM API 키가 설정되지 않았습니다. "
-                    "backend/.env 파일에 유효한 API 키(ANTHROPIC_API_KEY, OPENAI_API_KEY 등)를 설정해주세요."
+                    f"[{self.name}] LLM Provider '{provider}'의 인증 정보가 설정되지 않았습니다. "
+                    f"backend/.env 파일에 유효한 {req_cred}를 설정해주세요."
                 )
             )
 
@@ -175,15 +219,16 @@ class ProjectAgentAdapter(BaseAgentAdapter):
     async def astream(self, input_data: AgentInput, context: Optional[Any] = None) -> AsyncGenerator[AgentChunk, None]:
         llm = self._init_llm()
         if not llm:
-            provider = os.getenv("LLM_PROVIDER", "anthropic")
+            provider = os.getenv("LLM_PROVIDER", "anthropic").lower().strip()
+            req_cred = PROVIDER_CREDENTIAL_HINTS.get(provider, "API 키")
             notice = (
-                f"[{self.name}] LLM Provider '{provider}'의 API 키가 설정되지 않았습니다.\n\n"
-                "backend/.env 파일에 유효한 API 키(예: ANTHROPIC_API_KEY)를 입력한 후 다시 시도해주세요."
+                f"[{self.name}] LLM Provider '{provider}'의 인증 정보가 설정되지 않았습니다.\n\n"
+                f"backend/.env 파일에 유효한 {req_cred}를 설정한 후 다시 시도해주세요."
             )
             for char in notice:
                 yield AgentChunk(event=AgentEventType.TOKEN, data=char, content=char)
                 await asyncio.sleep(0.01)
-            yield AgentChunk(event=AgentEventType.DONE, data={"status": "fallback_no_api_key"})
+            yield AgentChunk(event=AgentEventType.DONE, data={"status": "fallback_no_credentials"})
             return
 
         graph = self._build_graph(llm)
@@ -197,9 +242,16 @@ class ProjectAgentAdapter(BaseAgentAdapter):
             yield AgentChunk(event=AgentEventType.DONE, data={"status": "completed"})
         except Exception as e:
             logger.error("LangGraph streaming execution error: %s", e, exc_info=True)
-            err_msg = f"\n\n[Agent Execution Error]: {str(e)}"
-            yield AgentChunk(event=AgentEventType.TOKEN, data=err_msg, content=err_msg)
-            yield AgentChunk(event=AgentEventType.ERROR, error=str(e), data={"status": "error"})
+            provider = os.getenv("LLM_PROVIDER", "anthropic").lower().strip()
+            err_detail = str(e)
+            if "API_KEY_INVALID" in err_detail or "Incorrect API key" in err_detail or "401" in err_detail:
+                friendly_msg = f"\n\n[{provider.upper()} 인증 오류]: 설정된 API 키가 유효하지 않습니다. backend/.env의 API 키를 확인해주세요."
+            elif "UnrecognizedClientException" in err_detail or "security token" in err_detail.lower():
+                friendly_msg = f"\n\n[AWS Bedrock 인증 오류]: AWS 자격 증명(Access Key / Secret Key)이 유효하지 않습니다. backend/.env 설정을 확인해주세요."
+            else:
+                friendly_msg = f"\n\n[Agent Execution Error ({provider})]: {err_detail}"
+            yield AgentChunk(event=AgentEventType.TOKEN, data=friendly_msg, content=friendly_msg)
+            yield AgentChunk(event=AgentEventType.ERROR, error=str(e), data={"status": "error", "provider": provider})
 
     async def ahandle_interrupt(
         self,
