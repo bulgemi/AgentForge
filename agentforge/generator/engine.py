@@ -280,7 +280,13 @@ docker compose --profile all up -d
 - **OpenSearch Dashboards**: http://localhost:5601
 - **OpenSearch API**: http://localhost:9200
 
-### 5. Manual Run Locally
+### 5. Initial Login Credentials (Default Admin)
+When the backend starts up for the first time, it automatically creates database tables and seeds a default administrator account:
+- **Username**: `admin`
+- **Password**: `admin1234!` (Can be customized via `DEFAULT_ADMIN_PASSWORD` in `backend/.env`)
+- **Role**: `admin` (Has access to both Chat Portal and Admin Console)
+
+### 6. Manual Run Locally
 ```bash
 # Backend
 cd backend

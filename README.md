@@ -141,7 +141,7 @@ AgentForge로 생성되는 모든 프로젝트는 [pay](https://github.com/Seori
 
 | 분류 | 세부 기능 | 구현 기술 및 특징 |
 | :--- | :--- | :--- |
-| **다중 인증 (Multi-Auth)** | **ID/Password** | PBKDF2/Bcrypt/Argon2 솔팅 해싱 및 비밀번호 복잡도/잠금 정책 |
+| **다중 인증 (Multi-Auth)** | **ID/Password** | PBKDF2/Bcrypt/Argon2 솔팅 해싱 및 비밀번호 복잡도/잠금 정책 (기본 관리자 계정 `admin`/`admin1234!` 자동 시딩) |
 | | **사내 LDAP** | `ldap3` 기반 Active Directory / OpenLDAP 연동 및 계정 자동 프로비저닝 |
 | | **SAML 2.0 SSO** | `pysaml2` 기반 Service Provider(SP) 메타데이터 교환 및 ACS Assertion 검증 |
 | **세션 & 보안 (Security)** | **토큰 & 분산 세션** | Native JWT Access/Refresh 토큰 및 Redis 분산 세션 저장소 |
@@ -340,6 +340,7 @@ AgentForge로 생성되는 모든 프로젝트는 [pay](https://github.com/Seori
 | **캐시 & 세션** | `REDIS_URL` | `redis://localhost:6379/0` | 분산 세션 및 토큰 블랙리스트 Redis URL |
 | **보안 & 인증** | `JWT_SECRET_KEY` | `{{ project_name }}-secret-key-...` | 토큰 서명용 시크릿 키 (운영 시 32자 이상 필수) |
 | | `JWT_ALGORITHM` | `HS256` | JWT 서명 알고리즘 |
+| | `DEFAULT_ADMIN_PASSWORD` | `admin1234!` | 최초 기동 시 자동 시딩될 기본 관리자(`admin`) 계정 비밀번호 |
 | | `CORS_ORIGINS` | `["http://localhost:5173", ...]` | 허용 CORS 오리진 목록 |
 | | `LDAP_ENABLED` / `SAML_ENABLED` | `false` | 사내 계정 연동 및 SAML SSO 활성화 토글 |
 | **MCP 도구** | `AX_MCP_SERVER_URL` / `AX_MCP_SERVER_NAME` | `http://127.0.0.1:8080/mcp` | Model Context Protocol 도구 서버 연동 |
@@ -610,6 +611,18 @@ docker compose --profile all down
 - **OpenSearch Dashboards GUI**: [http://localhost:5601](http://localhost:5601)
 - **OpenSearch REST API**: [http://localhost:9200](http://localhost:9200)
 - **MinIO 오브젝트 스토리지 콘솔**: [http://localhost:9001](http://localhost:9001) (`minioadmin` / `minioadmin`)
+
+#### 🔑 초기 로그인 기본 계정 안내 (Default Credentials)
+
+AgentForge로 생성된 백엔드 애플리케이션은 최초 기동 시 데이터베이스 테이블을 자동 생성하고 기본 관리자(Admin) 계정을 자동 등록(Seed)합니다:
+
+| 구분 | 계정 (Username) | 초기 비밀번호 (Password) | 기본 역할 (Role) | 주요 권한 및 용도 |
+| :--- | :--- | :--- | :--- | :--- |
+| **시스템 관리자** | `admin` | `admin1234!` | `admin` | • 사용자 채팅 포털 로그인<br/>• 관리자 콘솔(`/admin.html`) 접근<br/>• 사용자 신규 등록/수정/비밀번호 초기화<br/>• 계정 잠금 해제 |
+
+> 💡 **비밀번호 커스텀 및 보안 주의사항**:  
+> - 초기 비밀번호는 `backend/.env`의 `DEFAULT_ADMIN_PASSWORD` (기본값: `admin1234!`) 환경 변수로 재정의할 수 있습니다.
+> - 보안을 위해 운영(Production) 환경 배포 전 관리자 콘솔 또는 환경 변수를 통해 초기 비밀번호를 반드시 변경하십시오.
 
 ---
 
