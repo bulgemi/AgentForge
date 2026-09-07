@@ -29,7 +29,7 @@ def create_agent_app(agent_adapter: Any = None) -> FastAPI:
         logger.info("Starting up AgentForge backend application...")
         # 1. Initialize Database tables
         try:
-            async with db.engine.begin() as conn:
+            async with db.async_engine.begin() as conn:
                 await conn.run_sync(SQLModel.metadata.create_all)
             logger.info("Database schema initialized successfully.")
         except Exception as e:
@@ -41,6 +41,33 @@ def create_agent_app(agent_adapter: Any = None) -> FastAPI:
         if agent_adapter:
             app.state.agent_adapter = agent_adapter
         logger.info("AuthRuntime bound to application state.")
+
+        # 3. Seed default admin user if not present
+        try:
+            async with db.get_async_session() as session:
+                from .infrastructure.database.user_model import SQLModelUserRepository
+                from .domain.entities.user import User, UserRole, UserStatus
+                user_repo = SQLModelUserRepository(session)
+                admin_user = await user_repo.get_by_username("admin")
+                if not admin_user:
+                    import os
+                    import uuid
+                    from datetime import datetime, timezone
+                    default_pwd = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin1234!")
+                    new_admin = User(
+                        id=str(uuid.uuid4()),
+                        username="admin",
+                        email="admin@agentforge.local",
+                        role=UserRole.ADMIN,
+                        status=UserStatus.ACTIVE,
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc),
+                    )
+                    setattr(new_admin, "password_hash", runtime.password_hasher.hash(default_pwd))
+                    await user_repo.save(new_admin)
+                    logger.info("Default admin user ('admin' / '%s') seeded successfully.", default_pwd)
+        except Exception as e:
+            logger.warning("Admin seeding skipped or failed: %s", e)
 
         try:
             yield
