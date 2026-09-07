@@ -50,6 +50,10 @@ class SQLModelUserRepository(UserRepositoryPort):
 
         pwd_hash = getattr(user, "password_hash", None)
 
+        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+        c_at = user.created_at.replace(tzinfo=None) if (user.created_at and user.created_at.tzinfo) else (user.created_at or now_naive)
+        u_at = user.updated_at.replace(tzinfo=None) if (user.updated_at and user.updated_at.tzinfo) else (user.updated_at or now_naive)
+
         if not existing:
             existing = UserTable(
                 id=user.id,
@@ -59,8 +63,8 @@ class SQLModelUserRepository(UserRepositoryPort):
                 role=user.role.value if hasattr(user.role, "value") else str(user.role),
                 status=user.status.value if hasattr(user.status, "value") else str(user.status),
                 failed_login_attempts=user.failed_login_attempts,
-                created_at=user.created_at,
-                updated_at=user.updated_at,
+                created_at=c_at,
+                updated_at=u_at,
             )
             self.session.add(existing)
         else:
@@ -71,7 +75,7 @@ class SQLModelUserRepository(UserRepositoryPort):
             existing.role = user.role.value if hasattr(user.role, "value") else str(user.role)
             existing.status = user.status.value if hasattr(user.status, "value") else str(user.status)
             existing.failed_login_attempts = user.failed_login_attempts
-            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_at = now_naive
 
         await self.session.commit()
         await self.session.refresh(existing)

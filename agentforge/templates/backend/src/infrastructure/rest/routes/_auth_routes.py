@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from ....application.auth_service import AuthenticationService
 from ....application.dto.auth_dto import LoginRequest, SessionInfoResponse, TokenResponse
@@ -40,8 +43,11 @@ async def login(
         return await service.authenticate(req, ip_address=ip, user_agent=agent)
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-    except Exception as e:
+    except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.exception("Unexpected error during login: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/logout")
