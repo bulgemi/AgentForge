@@ -521,8 +521,17 @@ run.bat     # Windows
 agentforge dev  # 또는 af dev
 
 # Backend: http://localhost:8000 (API Docs: http://localhost:8000/docs)
-# Frontend: http://localhost:5173 (React/Vite) 또는 http://localhost:8501 (Streamlit)
+# Frontend (사용자 채팅): http://localhost:5173
+# Frontend (관리자 콘솔): http://localhost:5173/admin.html
+# 🔑 기본 관리자 로그인: admin / admin1234!
 ```
+
+> 🔑 **초기 로그인 기본 관리자 계정 안내**:  
+> 백엔드 서버 최초 기동 시 데이터베이스 테이블을 자동 생성하고 기본 관리자(Admin) 계정을 자동 등록(Seed)합니다.  
+> - **아이디 (Username)**: `admin`  
+> - **비밀번호 (Password)**: `admin1234!` (환경 변수 `DEFAULT_ADMIN_PASSWORD`로 변경 가능)  
+> - **역할 (Role)**: `admin` (사용자 채팅 포털 및 `/admin.html` 관리자 콘솔 전체 접근 가능)
+
 
 ### 2) Docker 이미지 빌드 (`build`)
 배포를 위한 프로덕션 컨테이너 이미지를 빌드합니다.
