@@ -55,7 +55,7 @@ if %ERRORLEVEL% EQU 0 (
         uv venv .venv
     )
     echo Installing AgentForge in editable mode with development dependencies...
-    uv pip install -e ".[dev]"
+    uv pip install --python .venv -e ".[dev]"
 ) else (
     echo [INFO] uv not found. Falling back to standard python venv and pip.
     if not exist ".venv" (

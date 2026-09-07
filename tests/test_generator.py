@@ -154,6 +154,9 @@ def test_scaffolding_engine_full_generation():
         backend_dir = project_dir / "backend"
         assert backend_dir.exists()
         assert (backend_dir / "pyproject.toml").exists()
+        backend_pyproj_text = (backend_dir / "pyproject.toml").read_text(encoding="utf-8")
+        assert "[tool.hatch.build.targets.wheel]" in backend_pyproj_text
+        assert 'packages = ["src"]' in backend_pyproj_text
         assert (backend_dir / "Dockerfile").exists()
         assert (backend_dir / "alembic.ini").exists()
 
@@ -178,6 +181,7 @@ def test_scaffolding_engine_full_generation():
 
         # Clean Architecture layer checks
         src_dir = backend_dir / "src"
+        assert (src_dir / "__init__.py").exists()
         assert (src_dir / "core" / "adapter.py").exists()
         assert (src_dir / "core" / "streaming.py").exists()
         assert (src_dir / "domain" / "entities" / "user.py").exists()
@@ -428,5 +432,175 @@ def test_scaffolding_infra_resilience_contracts():
         assert "Docker is installed but the Docker daemon is not running" in run_sh_text
         run_bat_text = (project_dir / "run.bat").read_text(encoding="utf-8")
         assert "Docker is installed but the Docker daemon is not running" in run_bat_text
+
+
+def test_backend_hatchling_wheel_target_and_editable_resolution():
+    """Verify Hatchling correctly resolves the package in backend/src when wheel target packages = ['src'] is configured."""
+    import os
+    import shutil
+    import subprocess
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="wheel-test-bot",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="none",
+        )
+
+        backend_dir = project_dir / "backend"
+        pyproject_file = backend_dir / "pyproject.toml"
+        init_file = backend_dir / "src" / "__init__.py"
+
+        assert pyproject_file.exists()
+        assert init_file.exists()
+
+        content = pyproject_file.read_text(encoding="utf-8")
+        assert "[tool.hatch.build.targets.wheel]" in content
+        assert 'packages = ["src"]' in content
+
+        setup_sh = project_dir / "setup.sh"
+        setup_sh_content = setup_sh.read_text(encoding="utf-8")
+        assert "--python .venv" in setup_sh_content
+
+        result = subprocess.run(
+            ["bash", str(setup_sh)],
+            cwd=str(project_dir),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        assert result.returncode == 0, f"setup.sh failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+        assert "ValueError" not in result.stderr
+
+        venv_python = backend_dir / ".venv" / "bin" / "python"
+        verify_import = subprocess.run(
+            [str(venv_python), "-c", "import src; print(src.__file__)"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert verify_import.returncode == 0, f"Failed to import src in generated venv: {verify_import.stderr}"
+        assert str(init_file) in verify_import.stdout
+
+        # Verify environment isolation: parent virtual environment was not contaminated
+        verify_leak = subprocess.run(["uv", "pip", "list"], capture_output=True, text=True)
+        assert "wheel-test-bot-backend" not in verify_leak.stdout
+
+
+def test_backend_hatchling_editable_resolution_pip_fallback():
+    """Verify Hatchling editable build succeeds when uv is absent via standard pip fallback in setup.sh."""
+    import os
+    import shutil
+    import subprocess
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="pip-fallback-bot",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="none",
+        )
+
+        backend_dir = project_dir / "backend"
+        init_file = backend_dir / "src" / "__init__.py"
+
+        uv_path = shutil.which("uv")
+        uv_dir = str(Path(uv_path).parent) if uv_path else ""
+        paths = os.environ.get("PATH", "").split(":")
+        clean_path = ":".join([p for p in paths if p != uv_dir])
+
+        env = dict(os.environ)
+        env["PATH"] = clean_path
+
+        setup_sh = project_dir / "setup.sh"
+        result = subprocess.run(
+            ["bash", str(setup_sh)],
+            cwd=str(project_dir),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        assert result.returncode == 0, f"setup.sh pip fallback failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+        assert "ValueError" not in result.stderr
+
+        venv_python = backend_dir / ".venv" / "bin" / "python"
+        verify_import = subprocess.run(
+            [str(venv_python), "-c", "import src; print(src.__file__)"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert verify_import.returncode == 0, f"Failed to import src in fallback venv: {verify_import.stderr}"
+        assert str(init_file) in verify_import.stdout
+
+        # Verify environment isolation: parent virtual environment was not contaminated
+        verify_leak = subprocess.run(["uv", "pip", "list"], capture_output=True, text=True)
+        assert "pip-fallback-bot-backend" not in verify_leak.stdout
+
+
+def test_existing_generated_project_af_test001():
+    """Verify existing generated project af_test001 satisfies Acceptance Criteria 2 and 3."""
+    import subprocess
+    from pathlib import Path
+
+    af_dir = Path("/Users/a08126/geminiProjects/af_test001")
+    if not af_dir.exists():
+        pytest.skip("Existing generated project af_test001 not found at /Users/a08126/geminiProjects/af_test001")
+
+    # Criterion 2: /Users/a08126/geminiProjects/af_test001/backend/pyproject.toml contains wheel target configuration
+    backend_dir = af_dir / "backend"
+    pyproject_path = backend_dir / "pyproject.toml"
+    assert pyproject_path.exists(), f"pyproject.toml missing at {pyproject_path}"
+
+    pyproject_content = pyproject_path.read_text(encoding="utf-8")
+    assert "[tool.hatch.build.targets.wheel]" in pyproject_content, (
+        "backend/pyproject.toml missing [tool.hatch.build.targets.wheel]"
+    )
+    assert 'packages = ["src"]' in pyproject_content, (
+        'backend/pyproject.toml missing packages = ["src"]'
+    )
+
+    init_py = backend_dir / "src" / "__init__.py"
+    assert init_py.exists(), f"src/__init__.py missing at {init_py}"
+
+    # Criterion 3: setup.sh in af_test001 completes backend dependency installation without Hatchling build errors
+    setup_sh = af_dir / "setup.sh"
+    assert setup_sh.exists(), f"setup.sh missing at {setup_sh}"
+
+    result = subprocess.run(
+        ["bash", str(setup_sh)],
+        cwd=str(af_dir),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, (
+        f"af_test001 setup.sh failed with return code {result.returncode}:\n"
+        f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
+    assert "ValueError" not in result.stderr, (
+        f"Hatchling ValueError detected in stderr:\n{result.stderr}"
+    )
+
+    # Verify editable installation allows importing src
+    venv_python = backend_dir / ".venv" / "bin" / "python"
+    assert venv_python.exists(), f"Virtualenv python missing at {venv_python}"
+    verify_import = subprocess.run(
+        [str(venv_python), "-c", "import src; print(src.__file__)"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert verify_import.returncode == 0, (
+        f"Failed to import src in af_test001 venv:\n{verify_import.stderr}"
+    )
+    assert str(init_py) in verify_import.stdout
+
+
+
 
 
