@@ -116,3 +116,51 @@ Update `ScaffoldingEngine` (`engine.py`) to properly substitute template tokens 
 - [ ] `BaseAppSettings.resolved_opensearch_url` dynamically constructs valid HTTP/HTTPS URLs with and without authentication.
 - [ ] Scaffolding generation test (`test_scaffolding_engine_full_generation`) verifies creation of all docker compose services, postgres-init sql, opensearch configs, and env variables.
 - [ ] All automated tests pass (`uv run pytest`).
+
+---
+
+## 2026-09-08T06:09:10Z
+
+This is a single self-contained fix; keep it small and focused.
+
+Resolve the Langfuse tracing issue across both `af_test002` (/Users/a08126/geminiProjects/af_test002) and `AgentForge` templates (/Users/a08126/geminiProjects/AgentForge), perform end-to-end functional verification, and complete an adversarial code review.
+
+Working directory: /Users/a08126/geminiProjects/AgentForge
+Integrity mode: development
+
+## Requirements
+
+### R1. Dependency & Configuration Synchronization
+Add `langfuse>=2.0.0` to `dependencies` in both `af_test002/backend/pyproject.toml` and `AgentForge/agentforge/templates/backend/pyproject.toml`. Ensure `.env` in `af_test002/backend/.env` has `LANGFUSE_HOST=http://localhost:3000` alongside `LANGFUSE_BASE_URL`, and that `BaseAppSettings` in `agentforge/core/config.py` correctly maps both aliases.
+
+### R2. Agent Adapter CallbackHandler Integration
+In `af_test002/backend/src/infrastructure/adapters/agent/agent.py` and `AgentForge/agentforge/templates/backend/src/frameworks/langgraph/agent.py`:
+- Implement a helper method `_get_langfuse_callback(self, input_data: AgentInput)` that reads `get_settings()`.
+- If `langfuse_enabled` is True and credentials (`langfuse_public_key`, `langfuse_secret_key`) are present, instantiate `langfuse.callback.CallbackHandler` with host, keys, `user_id`, `session_id` (or `chat_id`), and tags.
+- In both `astream()` and `ainvoke()`, inject the handler into the LangGraph execution config (`config={"callbacks": [handler]}`).
+- In a `finally` block of `astream()` and `ainvoke()`, safely invoke `handler.flush()` if available to ensure asynchronous events are pushed to the Langfuse server.
+- Ensure graceful fallback: if Langfuse is disabled, credentials are blank, or the package cannot be loaded, execution must continue normally without raising exceptions.
+
+### R3. Quality, Regression & Functional Verification
+- Run existing test suite in AgentForge (`pytest tests/`) to ensure all tests pass with 100% success.
+- Add test coverage or verification script in `AgentForge` verifying Langfuse callback injection and settings handling.
+- Verify `af_test002` backend Python syntax and import integrity.
+
+### R4. Multi-Agent Adversarial Code Review
+Review all modified files for:
+- Non-blocking error handling (tracing failure should never break user chat).
+- Clean architecture compliance and thread/async safety.
+- Zero regressions in existing LLM providers (Anthropic, OpenAI, Gemini, Bedrock) and SSE token streaming.
+
+## Acceptance Criteria
+
+### Implementation
+- [ ] `langfuse>=2.0.0` is added to `pyproject.toml` in both `af_test002/backend/` and `AgentForge/agentforge/templates/backend/`.
+- [ ] `_get_langfuse_callback()` correctly instantiates `CallbackHandler` with host, keys, session_id, and user_id.
+- [ ] `ProjectAgentAdapter.astream` and `ProjectAgentAdapter.ainvoke` pass the handler in `config={"callbacks": [...]}` and call `flush()` in `finally`.
+- [ ] Fallback behavior works: when `LANGFUSE_ENABLED=false` or keys are missing, no error is thrown and chat proceeds normally.
+
+### Quality & Verification
+- [ ] `pytest tests/` in `AgentForge` passes cleanly.
+- [ ] `af_test002` backend code passes compilation and import checks without error.
+- [ ] Adversarial review confirms no breaking changes to SSE streaming or provider logic.

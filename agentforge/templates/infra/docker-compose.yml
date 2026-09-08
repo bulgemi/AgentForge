@@ -127,6 +127,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      HOSTNAME: "0.0.0.0"
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgrespassword}@postgres:5432/langfuse
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-{{ project_name }}-langfuse-secret-dev}
       SALT: ${LANGFUSE_SALT:-{{ project_name }}-langfuse-salt-dev}
@@ -149,7 +150,7 @@ services:
       LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minioadmin
       LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health || wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/public/health"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/public/health || wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/public/health || wget --quiet --tries=1 --spider http://$$(hostname):3000/api/public/health || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 10
