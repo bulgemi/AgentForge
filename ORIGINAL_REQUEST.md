@@ -164,3 +164,45 @@ Review all modified files for:
 - [ ] `pytest tests/` in `AgentForge` passes cleanly.
 - [ ] `af_test002` backend code passes compilation and import checks without error.
 - [ ] Adversarial review confirms no breaking changes to SSE streaming or provider logic.
+
+---
+
+## 2026-09-08T09:03:35Z
+
+This is a single self-contained fix; keep it small and focused.
+
+AgentForge로 생성된 프로젝트 af_test002 및 AgentForge 프론트엔드 템플릿(agentforge/templates/frontend/react-vite)의 AI 챗봇 응답에 GFM(GitHub Flavored Markdown), 다크 테마 코드 구문 강조(Syntax Highlighting), 원클릭 코드 복사 버튼을 지원하도록 구현하고, 빌드 및 동작을 철저히 점검·리뷰하여 결과를 보고합니다.
+
+Working directory: /Users/a08126/geminiProjects/af_test002
+Integrity mode: development
+
+## Requirements
+
+### R1. AI 챗봇 응답 Markdown 렌더링 구현
+- 챗봇 응답(Assistant) 메시지에 `react-markdown` 및 `remark-gfm`을 적용하여 제목(H1~H6), 목록(불릿/번호), 인용문, 볼드/이탤릭, GFM 표(table), 링크 등이 정상 렌더링되도록 구현합니다.
+- 사용자 메시지(User)는 일반 텍스트 줄바꿈(`whitespace-pre-wrap`)을 유지합니다.
+
+### R2. 다크 테마 코드 블록 및 원클릭 복사
+- 멀티라인 코드 블록은 상단 헤더(언어 표기, 복사 버튼) 및 다크 테마 구문 강조(`react-syntax-highlighter`의 `vscDarkPlus` 스타일)를 적용합니다.
+- 복사 버튼 클릭 시 클립보드 복사 및 완료 피드백(체크 아이콘)을 제공합니다.
+
+### R3. AgentForge 원본 템플릿 동기화
+- `af_test002`뿐만 아니라 `AgentForge/agentforge/templates/frontend/react-vite` 템플릿(`package.json`, `ChatAssistant.jsx`, `MarkdownContent.jsx`)에도 동일하게 반영하여 향후 새로 생성되는 프로젝트에도 마크다운이 기본 지원되도록 합니다.
+
+### R4. 프론트엔드 빌드 점검 및 품질 리뷰 보고
+- 프론트엔드 의존성 설치 및 번들 빌드(`npm run build`)를 수행하여 문법 오류나 번들링 결함이 없는지 점검합니다.
+- 구현 내용, 코드 리뷰(스트리밍 호환성, 스타일링 일관성 등), 검증 결과를 상세히 작성하여 보고합니다.
+
+## Acceptance Criteria
+
+### 빌드 및 의존성 검증
+- [ ] `af_test002/frontend/package.json` 및 AgentForge 템플릿에 `react-markdown`, `remark-gfm`, `react-syntax-highlighter`가 정상 등록되어 있다.
+- [ ] `npm run build` 실행 시 번들링 오류 없이 정상 빌드된다.
+
+### 마크다운 렌더링 및 UI 검증
+- [ ] 볼드(`**text**`), 불릿/번호 리스트, 링크, 표(Table) 서식이 원문 텍스트 대신 HTML 서식으로 렌더링된다.
+- [ ] 코드 블록이 다크 테마 스타일로 구문 강조되고, 언어 표시 및 복사 버튼이 정상 작동한다.
+- [ ] 사용자 메시지 버블에는 마크다운 파싱이 적용되지 않고 기존 텍스트 줄바꿈이 유지된다.
+
+### 최종 결과 보고
+- [ ] 작업 완료 후 구현 변경점, 코드 리뷰 의견, 검증 결과가 포함된 최종 보고서가 작성된다.
