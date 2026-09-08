@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Terminal as TerminalIcon } from 'lucide-react';
 import { InterruptApprovalCard } from './InterruptApprovalCard';
 import { TerminalConsole } from './TerminalConsole';
+import { MarkdownContent } from './MarkdownContent';
 import { API_BASE } from '../../api/client';
 import { useAuth } from '../../auth/AuthProvider';
 
@@ -222,7 +223,11 @@ export function ChatAssistant({ chatId = 'default-chat', headerActions = null })
                         : 'border border-gray-200 bg-white text-gray-800'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{m.content}</div>
+                    {m.role === 'user' ? (
+                      <div className="whitespace-pre-wrap">{m.content}</div>
+                    ) : (
+                      <MarkdownContent content={m.content} />
+                    )}
                   </div>
                   {m.role === 'user' && (
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-300 text-gray-700 text-xs font-bold">
