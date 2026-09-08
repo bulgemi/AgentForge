@@ -304,7 +304,7 @@ class BaseAppSettings(BaseSettings):
     )
     langfuse_base_url: Optional[str] = Field(
         default="http://localhost:3000",
-        validation_alias=AliasChoices("LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
+        validation_alias=AliasChoices("langfuse_base_url", "langfuse_host", "LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
         description="Base URL for Langfuse server",
     )
 
@@ -490,6 +490,16 @@ class BaseAppSettings(BaseSettings):
             auth = ""
 
         return f"{scheme}://{auth}{host}:{port}"
+
+    @property
+    def langfuse_host(self) -> Optional[str]:
+        """Convenience alias for langfuse_base_url."""
+        return self.langfuse_base_url
+
+    @langfuse_host.setter
+    def langfuse_host(self, value: Optional[str]) -> None:
+        self.langfuse_base_url = value
+
 
 
 @lru_cache()

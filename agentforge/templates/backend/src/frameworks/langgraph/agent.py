@@ -3,9 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import os
+import sys
 from typing import Annotated, Any, AsyncGenerator, List, Optional, TypedDict
+
+# Ensure langfuse.callback points to langfuse.langchain for backwards compatibility
+try:
+    import langfuse
+    if not hasattr(langfuse, "callback"):
+        try:
+            import langfuse.langchain
+            sys.modules.setdefault("langfuse.callback", langfuse.langchain)
+            setattr(langfuse, "callback", langfuse.langchain)
+        except (ImportError, ModuleNotFoundError):
+            pass
+except (ImportError, ModuleNotFoundError):
+    pass
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
@@ -22,15 +37,37 @@ try:
         BaseAgentAdapter,
     )
 except (ImportError, ValueError):
-    from src.core.adapter import (
-        AgentChunk,
-        AgentEventType,
-        AgentInput,
-        AgentMessage,
-        AgentOutput,
-        AgentRole,
-        BaseAgentAdapter,
-    )
+    try:
+        from src.core.adapter import (
+            AgentChunk,
+            AgentEventType,
+            AgentInput,
+            AgentMessage,
+            AgentOutput,
+            AgentRole,
+            BaseAgentAdapter,
+        )
+    except (ImportError, ValueError):
+        from agentforge.core.adapter import (
+            AgentChunk,
+            AgentEventType,
+            AgentInput,
+            AgentMessage,
+            AgentOutput,
+            AgentRole,
+            BaseAgentAdapter,
+        )
+
+try:
+    from ....core.config import get_settings
+except (ImportError, ValueError):
+    try:
+        from ...core.config import get_settings
+    except (ImportError, ValueError):
+        try:
+            from src.core.config import get_settings
+        except (ImportError, ValueError):
+            from agentforge.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +96,135 @@ class ProjectAgentAdapter(BaseAgentAdapter):
     def __init__(self, name: str = "{{ project_name }}", **kwargs: Any) -> None:
         super().__init__(name=name, **kwargs)
         self.name = name
+
+    def _get_langfuse_callback(self, input_data: AgentInput) -> Optional[Any]:
+        """Initialize Langfuse CallbackHandler if enabled and credentials are present.
+
+        Returns:
+            CallbackHandler instance if enabled and configured, otherwise None.
+        """
+        try:
+            settings = get_settings()
+        except Exception as e:
+            logger.debug("Failed to retrieve settings for Langfuse callback: %s", e)
+            return None
+
+        if not getattr(settings, "langfuse_enabled", False):
+            return None
+
+        public_key = getattr(settings, "langfuse_public_key", None)
+        secret_key = getattr(settings, "langfuse_secret_key", None)
+        if not (public_key and str(public_key).strip() and secret_key and str(secret_key).strip()):
+            return None
+
+        public_key = str(public_key).strip()
+        secret_key = str(secret_key).strip()
+        raw_host = (
+            getattr(settings, "langfuse_base_url", None)
+            or getattr(settings, "langfuse_host", None)
+            or "http://localhost:3000"
+        )
+        host = str(raw_host).strip().rstrip("/") if raw_host else "http://localhost:3000"
+        raw_uid = getattr(input_data, "user_id", None) if input_data else None
+        user_id = str(raw_uid).strip() if raw_uid and str(raw_uid).strip() else None
+
+        raw_sid = getattr(input_data, "session_id", None) if input_data else None
+        raw_cid = getattr(input_data, "chat_id", None) if input_data else None
+        session_id = None
+        if raw_sid and str(raw_sid).strip():
+            session_id = str(raw_sid).strip()
+        elif raw_cid and str(raw_cid).strip():
+            session_id = str(raw_cid).strip()
+        tags = [self.name, "agentforge"]
+
+        cb_cls = None
+        try:
+            from langfuse.callback import CallbackHandler as _CB
+            cb_cls = _CB
+        except (ImportError, ModuleNotFoundError):
+            try:
+                from langfuse.langchain import CallbackHandler as _CB
+                cb_cls = _CB
+                import sys
+                sys.modules.setdefault("langfuse.callback", sys.modules.get("langfuse.langchain"))
+            except (ImportError, ModuleNotFoundError):
+                cb_cls = None
+
+        if cb_cls is None:
+            logger.debug("Langfuse callback package is not installed or available.")
+            return None
+
+        # Synchronize environment variables for Langfuse SDK
+        if host:
+            os.environ["LANGFUSE_HOST"] = host
+            os.environ["LANGFUSE_BASE_URL"] = host
+        if public_key:
+            os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
+        if secret_key:
+            os.environ["LANGFUSE_SECRET_KEY"] = secret_key
+
+        # In Langfuse v4+, register the client singleton in LangfuseResourceManager
+        # so CallbackHandler resolves to an active, enabled client.
+        try:
+            from langfuse import Langfuse
+            Langfuse(public_key=public_key, secret_key=secret_key, host=host)
+        except Exception as lf_init_err:
+            logger.debug("Langfuse client pre-initialization notice: %s", lf_init_err)
+
+        try:
+            try:
+                # Langfuse v2/v3 CallbackHandler constructor signature
+                kwargs: dict[str, Any] = {
+                    "public_key": public_key,
+                    "secret_key": secret_key,
+                    "host": host,
+                }
+                if user_id:
+                    kwargs["user_id"] = str(user_id)
+                if session_id:
+                    kwargs["session_id"] = str(session_id)
+                if tags:
+                    kwargs["tags"] = tags
+                handler = cb_cls(**kwargs)
+            except TypeError:
+                # Langfuse v4+ CallbackHandler constructor signature
+                try:
+                    handler = cb_cls(public_key=public_key)
+                except TypeError:
+                    handler = cb_cls()
+
+            if handler is not None:
+                # Guarantee attribute consistency across Langfuse versions
+                if user_id is not None and getattr(handler, "user_id", None) is None:
+                    try:
+                        setattr(handler, "user_id", str(user_id))
+                    except Exception:
+                        pass
+                if session_id is not None and getattr(handler, "session_id", None) is None:
+                    try:
+                        setattr(handler, "session_id", str(session_id))
+                    except Exception:
+                        pass
+                if host is not None and getattr(handler, "host", None) is None:
+                    try:
+                        setattr(handler, "host", str(host))
+                    except Exception:
+                        pass
+                if tags is not None and getattr(handler, "tags", None) is None:
+                    try:
+                        setattr(handler, "tags", tags)
+                    except Exception:
+                        pass
+
+                if not hasattr(handler, "flush") or not callable(getattr(handler, "flush", None)):
+                    client = getattr(handler, "_langfuse_client", None)
+                    if client and hasattr(client, "flush") and callable(client.flush):
+                        handler.flush = client.flush
+
+            return handler
+        except Exception as e:
+            logger.warning("Failed to initialize Langfuse CallbackHandler: %s", e)
+            return None
 
     def _init_llm(self) -> Any:
         """Initialize LLM based on environment variables."""
@@ -174,9 +340,31 @@ class ProjectAgentAdapter(BaseAgentAdapter):
         workflow.add_edge("agent", END)
         return workflow.compile()
 
-    def _prepare_messages(self, input_data: AgentInput) -> list[BaseMessage]:
+    @staticmethod
+    def _extract_text_content(content: Any) -> str:
+        """Safely extract plain text string from str, list of content blocks, or dict payloads."""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    if item.get("type") == "text" and "text" in item:
+                        parts.append(str(item["text"]))
+                    elif "text" in item:
+                        parts.append(str(item["text"]))
+            return "".join(parts) if parts else str(content)
+        if content is None:
+            return ""
+        return str(content)
+
+    def _prepare_messages(self, input_data: Optional[AgentInput]) -> list[BaseMessage]:
         """Convert input messages or prompt to LangChain BaseMessage list."""
         lc_messages: list[BaseMessage] = []
+        if not input_data:
+            return lc_messages
         if input_data.messages:
             for msg in input_data.messages:
                 role = getattr(msg, "role", "user")
@@ -193,6 +381,63 @@ class ProjectAgentAdapter(BaseAgentAdapter):
                 lc_messages.append(HumanMessage(content=prompt))
         return lc_messages
 
+    def _build_execution_config(self, input_data: Optional[AgentInput], handler: Optional[Any]) -> dict[str, Any]:
+        """Safely prepare LangGraph execution configuration with callbacks, metadata, and tags."""
+        execution_config: dict[str, Any] = {}
+        try:
+            raw_config = getattr(input_data, "config", None) if input_data else None
+            if isinstance(raw_config, dict):
+                execution_config = dict(raw_config)
+
+            if handler is not None:
+                raw_callbacks = execution_config.get("callbacks")
+                if isinstance(raw_callbacks, list):
+                    callbacks = list(raw_callbacks)
+                elif isinstance(raw_callbacks, (tuple, set)):
+                    callbacks = list(raw_callbacks)
+                elif raw_callbacks is not None:
+                    callbacks = [raw_callbacks]
+                else:
+                    callbacks = []
+
+                if handler not in callbacks:
+                    callbacks.append(handler)
+                execution_config["callbacks"] = callbacks
+
+                raw_meta = execution_config.get("metadata")
+                metadata: dict[str, Any] = dict(raw_meta) if isinstance(raw_meta, dict) else {}
+                raw_uid = getattr(input_data, "user_id", None) if input_data else None
+                if raw_uid and str(raw_uid).strip():
+                    metadata.setdefault("langfuse_user_id", str(raw_uid).strip())
+                raw_sid = getattr(input_data, "session_id", None) if input_data else None
+                raw_cid = getattr(input_data, "chat_id", None) if input_data else None
+                if raw_sid and str(raw_sid).strip():
+                    metadata.setdefault("langfuse_session_id", str(raw_sid).strip())
+                elif raw_cid and str(raw_cid).strip():
+                    metadata.setdefault("langfuse_session_id", str(raw_cid).strip())
+                if self.name:
+                    metadata.setdefault("langfuse_trace_name", self.name)
+                if metadata:
+                    execution_config["metadata"] = metadata
+
+                raw_tags = execution_config.get("tags")
+                if isinstance(raw_tags, list):
+                    tags = list(raw_tags)
+                elif isinstance(raw_tags, (tuple, set)):
+                    tags = list(raw_tags)
+                elif raw_tags is not None:
+                    tags = [str(raw_tags)]
+                else:
+                    tags = []
+                for t in [self.name, "agentforge"]:
+                    if t and t not in tags:
+                        tags.append(t)
+                execution_config["tags"] = tags
+        except Exception as err:
+            logger.debug("Non-blocking error assembling execution config: %s", err)
+
+        return execution_config
+
     async def ainvoke(self, input_data: AgentInput, context: Optional[Any] = None) -> AgentOutput:
         llm = self._init_llm()
         if not llm:
@@ -207,14 +452,34 @@ class ProjectAgentAdapter(BaseAgentAdapter):
 
         graph = self._build_graph(llm)
         lc_messages = self._prepare_messages(input_data)
+        handler = self._get_langfuse_callback(input_data)
+        execution_config = self._build_execution_config(input_data, handler)
+
         try:
-            res = await graph.ainvoke({"messages": lc_messages})
+            res = await graph.ainvoke(
+                {"messages": lc_messages},
+                config=execution_config if execution_config else None,
+            )
             out_messages = res.get("messages", [])
-            final_content = out_messages[-1].content if out_messages else ""
-            return AgentOutput(content=str(final_content))
+            raw_final = out_messages[-1].content if out_messages else ""
+            final_content = self._extract_text_content(raw_final)
+            return AgentOutput(content=final_content)
         except Exception as e:
             logger.error("LangGraph execution error: %s", e)
             return AgentOutput(content=f"Error executing agent: {e}")
+        finally:
+            if handler is not None:
+                try:
+                    if hasattr(handler, "flush") and callable(handler.flush):
+                        res = handler.flush()
+                        if inspect.isawaitable(res):
+                            await res
+                    elif hasattr(handler, "_langfuse_client") and hasattr(handler._langfuse_client, "flush") and callable(handler._langfuse_client.flush):
+                        res = handler._langfuse_client.flush()
+                        if inspect.isawaitable(res):
+                            await res
+                except Exception as flush_err:
+                    logger.debug("Langfuse handler flush failed: %s", flush_err)
 
     async def astream(self, input_data: AgentInput, context: Optional[Any] = None) -> AsyncGenerator[AgentChunk, None]:
         llm = self._init_llm()
@@ -233,12 +498,19 @@ class ProjectAgentAdapter(BaseAgentAdapter):
 
         graph = self._build_graph(llm)
         lc_messages = self._prepare_messages(input_data)
+        handler = self._get_langfuse_callback(input_data)
+        execution_config = self._build_execution_config(input_data, handler)
 
         try:
-            async for chunk, meta in graph.astream({"messages": lc_messages}, stream_mode="messages"):
-                content = getattr(chunk, "content", "")
-                if content:
-                    yield AgentChunk(event=AgentEventType.TOKEN, data=content, content=content)
+            async for chunk, meta in graph.astream(
+                {"messages": lc_messages},
+                config=execution_config if execution_config else None,
+                stream_mode="messages",
+            ):
+                raw_content = getattr(chunk, "content", "")
+                text_content = self._extract_text_content(raw_content)
+                if text_content:
+                    yield AgentChunk(event=AgentEventType.TOKEN, data=text_content, content=text_content)
             yield AgentChunk(event=AgentEventType.DONE, data={"status": "completed"})
         except Exception as e:
             logger.error("LangGraph streaming execution error: %s", e, exc_info=True)
@@ -252,6 +524,19 @@ class ProjectAgentAdapter(BaseAgentAdapter):
                 friendly_msg = f"\n\n[Agent Execution Error ({provider})]: {err_detail}"
             yield AgentChunk(event=AgentEventType.TOKEN, data=friendly_msg, content=friendly_msg)
             yield AgentChunk(event=AgentEventType.ERROR, error=str(e), data={"status": "error", "provider": provider})
+        finally:
+            if handler is not None:
+                try:
+                    if hasattr(handler, "flush") and callable(handler.flush):
+                        res = handler.flush()
+                        if inspect.isawaitable(res):
+                            await res
+                    elif hasattr(handler, "_langfuse_client") and hasattr(handler._langfuse_client, "flush") and callable(handler._langfuse_client.flush):
+                        res = handler._langfuse_client.flush()
+                        if inspect.isawaitable(res):
+                            await res
+                except Exception as flush_err:
+                    logger.debug("Langfuse handler flush failed: %s", flush_err)
 
     async def ahandle_interrupt(
         self,
