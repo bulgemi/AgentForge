@@ -20,33 +20,32 @@ function MainPortal() {
   }
 
   return (
-    <div className="relative">
-      {/* Top Bar for User & Navigation */}
-      <div className="absolute top-3 right-6 z-20 flex items-center gap-3">
-        <span className="text-xs font-semibold text-gray-600 bg-white/80 backdrop-blur px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-          👤 {user.username} ({user.role})
-        </span>
-        {user.role === 'admin' && (
-          <a
-            href="/admin.html"
-            className="flex items-center gap-1 text-xs font-semibold text-skred bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-lg shadow-sm transition"
+    <ChatAssistant
+      headerActions={
+        <>
+          <span className="text-xs font-semibold text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+            👤 {user.username} ({user.role})
+          </span>
+          {user.role === 'admin' && (
+            <a
+              href="/admin.html"
+              className="flex items-center gap-1 text-xs font-semibold text-skred bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg shadow-sm transition"
+            >
+              <Shield className="h-3.5 w-3.5" />
+              관리자 콘솔
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-1 text-xs font-semibold text-gray-600 bg-white hover:bg-gray-100 border border-gray-200 px-2.5 py-1.5 rounded-lg shadow-sm transition"
           >
-            <Shield className="h-3.5 w-3.5" />
-            관리자 콘솔
-          </a>
-        )}
-        <button
-          type="button"
-          onClick={logout}
-          className="flex items-center gap-1 text-xs font-semibold text-gray-600 bg-white hover:bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg shadow-sm transition"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          로그아웃
-        </button>
-      </div>
-
-      <ChatAssistant />
-    </div>
+            <LogOut className="h-3.5 w-3.5" />
+            로그아웃
+          </button>
+        </>
+      }
+    />
   );
 }
 

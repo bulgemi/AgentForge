@@ -5,7 +5,7 @@ import { TerminalConsole } from './TerminalConsole';
 import { API_BASE } from '../../api/client';
 import { useAuth } from '../../auth/AuthProvider';
 
-export function ChatAssistant({ chatId = 'default-chat' }) {
+export function ChatAssistant({ chatId = 'default-chat', headerActions = null }) {
   const { logout } = useAuth() || {};
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -185,6 +185,7 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
             <TerminalIcon className="h-3.5 w-3.5" />
             Console
           </button>
+          {headerActions}
         </div>
       </header>
 
