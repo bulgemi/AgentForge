@@ -2,7 +2,7 @@
  * Unified API Client with JWT Bearer token injection.
  */
 
-export const API_BASE = '/api/v1';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem('access_token');

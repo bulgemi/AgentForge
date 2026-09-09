@@ -495,6 +495,14 @@ class Database:
                 self._sync_engine = None
                 self._sync_session_factory = None
 
+    async def dispose(self) -> None:
+        """Alias for aclose() for async engine disposal compatibility."""
+        await self.aclose()
+
+    async def adispose(self) -> None:
+        """Alias for aclose() for async engine disposal compatibility."""
+        await self.aclose()
+
 
 # Module-level singleton
 db = Database()

@@ -117,7 +117,47 @@ class AuthenticationService:
             user_id=user.id,
             username=user.username,
             role=user.role.value if hasattr(user.role, "value") else str(user.role),
+            status=user.status.value if hasattr(user.status, "value") else str(user.status),
         )
+
+    async def change_password(
+        self,
+        user_id: str,
+        current_password: str,
+        new_password: str,
+    ) -> None:
+        """Change user password, enforce complexity, and activate account."""
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise LookupError("User not found.")
+
+        # 1. Verify current password
+        stored_hash = getattr(user, "password_hash", None)
+        if not stored_hash or not self.password_hasher.verify(current_password, stored_hash):
+            raise ValueError("현재 비밀번호가 일치하지 않습니다.")
+
+        # 2. Check that new password differs from current password
+        if current_password == new_password:
+            raise ValueError("새 비밀번호는 현재(임시) 비밀번호와 달라야 합니다.")
+
+        # 3. Password complexity validation: at least 8 chars, letters, numbers, and special characters
+        if len(new_password) < 8:
+            raise ValueError("비밀번호는 최소 8자 이상이어야 합니다.")
+
+        has_letter = any(c.isalpha() for c in new_password)
+        has_digit = any(c.isdigit() for c in new_password)
+        special_characters = set('~!@#$%^&*()-_=+[{]}\\|;:\'",<.>/?`')
+        has_special = any(c in special_characters for c in new_password)
+
+        if not (has_letter and has_digit and has_special):
+            raise ValueError("비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.")
+
+        # 4. Hash and save new password, set status to ACTIVE
+        new_hash = self.password_hasher.hash(new_password)
+        setattr(user, "password_hash", new_hash)
+        user.status = UserStatus.ACTIVE
+        user.failed_login_attempts = 0
+        await self.user_repo.save(user)
 
     async def logout(self, session_id: str, jti: str | None = None) -> None:
         """Revoke active session and blacklist token."""

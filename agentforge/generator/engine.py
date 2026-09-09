@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any, Mapping
@@ -21,6 +23,16 @@ PACKAGE_TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 PACKAGE_ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 
 
+def to_snake_case(name: str) -> str:
+    """Convert PascalCase, camelCase, or kebab-case string into lowercase snake_case."""
+    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', name)
+    s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
+    s = s.replace("-", "_")
+    s = re.sub(r'_+', '_', s)
+    result = s.strip("_").lower()
+    return result or "agentforge_app"
+
+
 class ScaffoldingEngine:
     """Orchestrates creation of fullstack standalone agent projects."""
 
@@ -31,10 +43,9 @@ class ScaffoldingEngine:
         """Simple, fast token replacement without requiring heavy template runtime."""
         rendered = text
         for key, value in context.items():
-            token_bracket = "{{" + f" {key} " + "}}"
-            token_compact = "{{" + f"{key}" + "}}"
-            rendered = rendered.replace(token_bracket, str(value))
-            rendered = rendered.replace(token_compact, str(value))
+            # Support {{ key }}, {{key}}, {{  key  }} with arbitrary internal whitespace
+            pattern = re.compile(r"\{\{\s*" + re.escape(key) + r"\s*\}\}")
+            rendered = pattern.sub(str(value), rendered)
         return rendered
 
     def copy_template_tree(
@@ -63,11 +74,14 @@ class ScaffoldingEngine:
             ".html",
             ".css",
             ".sh",
+            ".bat",
+            ".cmd",
             ".env",
             ".sample",
             ".ini",
             ".conf",
             ".txt",
+            ".sql",
         )
 
         for root, dirs, files in os.walk(source_dir):
@@ -90,8 +104,8 @@ class ScaffoldingEngine:
                         rendered = self.render_content(content, context)
                         dest_file.write_text(rendered, encoding="utf-8")
                         # Preserve executable permissions for scripts
-                        if src_file.stat().st_mode & 0o111:
-                            dest_file.chmod(dest_file.stat().st_mode | 0o111)
+                        if (src_file.stat().st_mode & 0o111) or file_name.endswith(".sh"):
+                            dest_file.chmod(dest_file.stat().st_mode | 0o755)
                         continue
                     except UnicodeDecodeError:
                         pass
@@ -127,7 +141,7 @@ class ScaffoldingEngine:
 
         context = {
             "project_name": clean_name,
-            "project_name_snake": clean_name.replace("-", "_"),
+            "project_name_snake": to_snake_case(clean_name),
             "framework": clean_framework,
             "frontend": clean_frontend,
             "python_version": "3.12",
@@ -194,6 +208,15 @@ class ScaffoldingEngine:
         copy_core_engine(dest_backend_src, overwrite=True)
 
         # 6. Generate project README.md and root files
+        gitignore_tpl = self.templates_dir / "root" / ".gitignore"
+        dest_gitignore = dest_root / ".gitignore"
+        if gitignore_tpl.exists() and not dest_gitignore.exists():
+            gi_content = gitignore_tpl.read_text(encoding="utf-8")
+            dest_gitignore.write_text(self.render_content(gi_content, context), encoding="utf-8")
+
+        # 6.1 Generate VS Code Launch and Settings configurations (.vscode/launch.json, settings.json)
+        self._generate_vscode_configs(dest_root, clean_frontend)
+
         readme_path = dest_root / "README.md"
         if not readme_path.exists():
             readme_content = f"""# {clean_name} ⚡
@@ -204,12 +227,14 @@ Standalone AI Agent Project built with [AgentForge](https://github.com/bulgemi/A
 - **Frontend**: {clean_frontend}
 - **Architecture**: Fullstack Clean Architecture Monorepo
 - **Authentication**: ID/PW, LDAP, SAML 2.0
-- **Database**: PostgreSQL 16 + Redis 7
+- **Database & Cache**: PostgreSQL 16 + Redis 7.4
+- **Observability**: Langfuse v3 (ClickHouse + MinIO + Web + Worker)
+- **Search & Vectors**: OpenSearch 2.19.3 + OpenSearch Dashboards
 
 ## Quick Start
 
 ### 1. One-Click Local Run (Recommended)
-Automatically sets up virtual environment, installs dependencies, and runs dev servers.
+Automatically sets up virtual environment, launches Docker infrastructure (Postgres, Redis, Langfuse, OpenSearch), and runs dev servers.
 
 ```bash
 # macOS / Linux
@@ -221,15 +246,47 @@ run.bat
 
 > **Tip**: To install dependencies only without starting servers, run `./setup.sh` or `setup.bat`.
 
-### 2. Run with Docker Compose
-```bash
-docker-compose up -d
-```
-- Frontend (Chat): http://localhost:5173
-- Frontend (Admin): http://localhost:5173/admin/
-- Backend API Docs: http://localhost:8000/docs
+### 2. VS Code One-Click Launch & Debug (F5)
+Press **F5** or navigate to the **Run and Debug** view (`Ctrl+Shift+D` / `Cmd+Shift+D`):
+- **Fullstack: Backend + Frontend**: Launches both backend (FastAPI uvicorn) and frontend dev server simultaneously.
+- **Backend: FastAPI (uvicorn)**: Debug FastAPI backend with breakpoint support.
+- **Frontend: Vite Dev Server**: Start frontend with automatic browser launching.
 
-### 3. Manual Run Locally
+### 3. Manage Infrastructure with Docker Compose
+
+> **Important**: All services use Docker Compose profiles. Running `docker compose up -d` without `--profile` will result in `no service selected`. Always specify `--profile infra` (recommended for local development) or `--profile all`.
+
+Start specific stacks using Docker Compose profiles:
+
+```bash
+# 1. Start all infrastructure (Recommended: PostgreSQL, Redis, Langfuse v3, OpenSearch)
+docker compose --profile infra up -d
+
+# 2. Start observability stack only (Langfuse Web, Worker, ClickHouse, MinIO)
+docker compose --profile observability up -d
+
+# 3. Start search stack only (OpenSearch, Init, Dashboards)
+docker compose --profile search up -d
+
+# 4. Start all services including Backend & Frontend containers
+docker compose --profile all up -d
+```
+
+### 4. Service Dashboard & URLs
+- **Frontend (Chat)**: http://localhost:5173
+- **Frontend (Admin)**: http://localhost:5173/admin.html
+- **Backend API Docs**: http://localhost:8000/docs
+- **Langfuse Observability**: http://localhost:3000
+- **OpenSearch Dashboards**: http://localhost:5601
+- **OpenSearch API**: http://localhost:9200
+
+### 5. Initial Login Credentials (Default Admin)
+When the backend starts up for the first time, it automatically creates database tables and seeds a default administrator account:
+- **Username**: `admin`
+- **Password**: `admin1234!` (Can be customized via `DEFAULT_ADMIN_PASSWORD` in `backend/.env`)
+- **Role**: `admin` (Has access to both Chat Portal and Admin Console)
+
+### 6. Manual Run Locally
 ```bash
 # Backend
 cd backend
@@ -247,3 +304,115 @@ npm run dev
         validate_generated_project(dest_root)
 
         return dest_root
+
+    def _generate_vscode_configs(self, dest_root: Path, frontend: str) -> None:
+        """Generate .vscode/launch.json and .vscode/settings.json configurations."""
+        vscode_dir = dest_root / ".vscode"
+        vscode_dir.mkdir(parents=True, exist_ok=True)
+
+        backend_config: dict[str, Any] = {
+            "name": "Backend: FastAPI (uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/backend/.venv/bin/python",
+            "windows": {
+                "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+            },
+            "module": "uvicorn",
+            "args": [
+                "src.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000",
+                "--reload"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "envFile": "${workspaceFolder}/backend/.env",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src:${workspaceFolder}/backend"
+            },
+            "jinja": True,
+            "justMyCode": False,
+            "console": "integratedTerminal"
+        }
+
+        configurations: list[dict[str, Any]] = [backend_config]
+        compounds: list[dict[str, Any]] = []
+
+        if frontend in ("react", "react-vite"):
+            frontend_config: dict[str, Any] = {
+                "name": "Frontend: Vite Dev Server",
+                "type": "node-terminal",
+                "request": "launch",
+                "command": "npm run dev",
+                "cwd": "${workspaceFolder}/frontend",
+                "envFile": "${workspaceFolder}/frontend/.env",
+                "serverReadyAction": {
+                    "pattern": "Local:\\s+(https?://\\S+)",
+                    "uriFormat": "%s",
+                    "action": "openExternally"
+                }
+            }
+            configurations.append(frontend_config)
+            compounds.append({
+                "name": "Fullstack: Backend + Frontend",
+                "configurations": [
+                    "Backend: FastAPI (uvicorn)",
+                    "Frontend: Vite Dev Server"
+                ],
+                "stopAll": True
+            })
+        elif frontend == "streamlit":
+            frontend_config = {
+                "name": "Frontend: Streamlit UI",
+                "type": "debugpy",
+                "request": "launch",
+                "python": "${workspaceFolder}/backend/.venv/bin/python",
+                "windows": {
+                    "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+                },
+                "module": "streamlit",
+                "args": [
+                    "run",
+                    "app.py"
+                ],
+                "cwd": "${workspaceFolder}/frontend",
+                "envFile": "${workspaceFolder}/backend/.env",
+                "console": "integratedTerminal"
+            }
+            configurations.append(frontend_config)
+            compounds.append({
+                "name": "Fullstack: Backend + Frontend",
+                "configurations": [
+                    "Backend: FastAPI (uvicorn)",
+                    "Frontend: Streamlit UI"
+                ],
+                "stopAll": True
+            })
+
+        launch_data: dict[str, Any] = {
+            "version": "0.2.0",
+            "configurations": configurations
+        }
+        if compounds:
+            launch_data["compounds"] = compounds
+
+        launch_file = vscode_dir / "launch.json"
+        if not launch_file.exists():
+            launch_file.write_text(json.dumps(launch_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        settings_data: dict[str, Any] = {
+            "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+            "python.analysis.extraPaths": [
+                "${workspaceFolder}/backend",
+                "${workspaceFolder}/backend/src"
+            ],
+            "python.autoComplete.extraPaths": [
+                "${workspaceFolder}/backend",
+                "${workspaceFolder}/backend/src"
+            ]
+        }
+        settings_file = vscode_dir / "settings.json"
+        if not settings_file.exists():
+            settings_file.write_text(json.dumps(settings_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

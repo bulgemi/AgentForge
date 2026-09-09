@@ -111,11 +111,12 @@ class AgentInput(BaseModel):
     session_id: Optional[str] = None
     chat_id: Optional[str] = None
     turn_id: Optional[str] = None
+    user_id: Optional[str] = None
     tools: Optional[List[ToolDefinition]] = None
     config: Dict[str, Any] = Field(default_factory=dict)
     resume_payload: Optional[Dict[str, Any]] = None
 
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True, extra="allow")
 
     def get_prompt_or_last_message(self) -> str:
         """Extract prompt text or fallback to the latest user message content."""
@@ -251,8 +252,10 @@ class BaseAgentAdapter(ABC):
     All concrete adapters must inherit from this class.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> None:
         self.config: Dict[str, Any] = config or {}
+        if kwargs:
+            self.config.update(kwargs)
         self._is_initialized: bool = False
 
     async def initialize(self) -> None:

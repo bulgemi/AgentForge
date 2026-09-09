@@ -31,7 +31,8 @@ class ValidationError(Exception):
 def validate_project_name(name: str) -> str:
     """Validate project identifier.
     
-    Must consist of lowercase alphanumeric characters, underscores, or hyphens.
+    Must consist of alphanumeric characters, underscores, or hyphens,
+    and must contain at least one alphanumeric character.
     """
     cleaned = name.strip()
     if not cleaned:
@@ -39,6 +40,10 @@ def validate_project_name(name: str) -> str:
     if not re.match(r"^[a-zA-Z0-9_-]+$", cleaned):
         raise ValidationError(
             f"Invalid project name '{cleaned}'. Must contain only letters, numbers, hyphens, and underscores."
+        )
+    if not re.search(r"[a-zA-Z0-9]", cleaned):
+        raise ValidationError(
+            f"Invalid project name '{cleaned}'. Must contain at least one letter or digit."
         )
     return cleaned
 

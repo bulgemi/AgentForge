@@ -26,6 +26,11 @@ echo -e "${NC}"
 echo -e "${BOLD}[1/2] Setting up Backend...${NC}"
 cd "$SCRIPT_DIR/backend"
 
+if [ ! -f ".env" ] && [ -f ".env.sample" ]; then
+    echo -e "${GREEN}✓ Initializing backend/.env from .env.sample${NC}"
+    cp ".env.sample" ".env"
+fi
+
 PYTHON_CMD=""
 if command -v python3 >/dev/null 2>&1; then
     PYTHON_CMD="python3"
@@ -50,7 +55,7 @@ if command -v uv >/dev/null 2>&1; then
     if [ ! -d ".venv" ]; then
         uv venv .venv
     fi
-    uv pip install -e ".[dev]"
+    uv pip install --python .venv -e ".[dev]"
 else
     echo -e "${YELLOW}ℹ uv not found, using standard venv and pip.${NC}"
     if [ ! -d ".venv" ]; then
@@ -68,6 +73,10 @@ cd "$SCRIPT_DIR"
 if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
     echo -e "${BOLD}[2/2] Setting up Frontend...${NC}"
     cd "$SCRIPT_DIR/frontend"
+    if [ ! -f ".env" ] && [ -f ".env.sample" ]; then
+        echo -e "${GREEN}✓ Initializing frontend/.env from .env.sample${NC}"
+        cp ".env.sample" ".env"
+    fi
     if ! command -v npm >/dev/null 2>&1; then
         echo -e "${YELLOW}⚠️ npm is not installed. Please install Node.js (v18+) to run frontend.${NC}"
     else

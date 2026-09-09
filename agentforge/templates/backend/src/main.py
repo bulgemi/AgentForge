@@ -20,27 +20,33 @@ from src.bootstrap import create_agent_app
 # Default Framework Adapter selection
 def get_default_adapter():
     """Load framework adapter based on project scaffolding."""
+    try:
+        from src.infrastructure.adapters.agent.agent import ProjectAgentAdapter
+        return ProjectAgentAdapter(name="{{ project_name }}")
+    except Exception:
+        pass
+
     framework = "{{ framework }}"
     try:
         if framework == "langgraph":
             from src.core.adapter import LangGraphAdapter
-            return LangGraphAdapter(name="{{ project_name }}")
+            return LangGraphAdapter(config={"name": "{{ project_name }}"})
         elif framework == "langchain":
             from src.core.adapter import LangChainAdapter
-            return LangChainAdapter(name="{{ project_name }}")
+            return LangChainAdapter(config={"name": "{{ project_name }}"})
         elif framework == "deepagent":
             from src.core.adapter import DeepAgentAdapter
-            return DeepAgentAdapter(name="{{ project_name }}")
+            return DeepAgentAdapter(config={"name": "{{ project_name }}"})
         elif framework == "adk":
             from src.core.adapter import get_adapter
-            return get_adapter("adk", name="{{ project_name }}")
+            return get_adapter("adk", config={"name": "{{ project_name }}"})
         elif framework == "bedrock":
             from src.core.adapter import BedrockAdapter
-            return BedrockAdapter(name="{{ project_name }}")
+            return BedrockAdapter(config={"name": "{{ project_name }}"})
     except Exception:
         pass
     from src.core.adapter import LangGraphAdapter
-    return LangGraphAdapter(name="{{ project_name }}")
+    return LangGraphAdapter(config={"name": "{{ project_name }}"})
 
 
 app = create_agent_app(agent_adapter=get_default_adapter())

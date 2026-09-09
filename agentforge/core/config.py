@@ -58,6 +58,11 @@ class BaseAppSettings(BaseSettings):
         validation_alias=AliasChoices("LOG_LEVEL", "LOGGING_LEVEL"),
         description="Logging level (DEBUG, INFO, WARNING, ERROR)",
     )
+    log_format: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LOG_FORMAT"),
+        description="Custom log format string",
+    )
     debug: bool = Field(
         default=False,
         validation_alias=AliasChoices("DEBUG", "APP_DEBUG"),
@@ -101,6 +106,16 @@ class BaseAppSettings(BaseSettings):
         default="agentforge",
         validation_alias=AliasChoices("DATABASE_DBNAME", "DATABASE_NAME", "DB_NAME"),
         description="Database catalog / database name",
+    )
+    database_schema: str = Field(
+        default="public",
+        validation_alias=AliasChoices("DATABASE_SCHEMA", "DB_SCHEMA"),
+        description="Database schema name",
+    )
+    database_auto_migrate: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("DATABASE_AUTO_MIGRATE", "DB_AUTO_MIGRATE"),
+        description="Automatically initialize or migrate database schema on startup",
     )
     database_pool_size: int = Field(
         default=10,
@@ -224,6 +239,118 @@ class BaseAppSettings(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY"),
         description="Google Gemini API authentication key",
     )
+    openai_model_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_MODEL_NAME"),
+        description="OpenAI model identifier (e.g. gpt-4o)",
+    )
+    gemini_model_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("GEMINI_MODEL_NAME"),
+        description="Google Gemini model identifier (e.g. gemini-2.5-pro)",
+    )
+    claude_model_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("CLAUDE_MODEL_NAME"),
+        description="Anthropic Claude model identifier (e.g. claude-3-5-sonnet-20240620)",
+    )
+    bedrock_model_id: Optional[str] = Field(
+        default="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        validation_alias=AliasChoices("BEDROCK_MODEL_ID", "AWS_BEDROCK_MODEL_ID"),
+        description="AWS Bedrock model identifier",
+    )
+    bedrock_region_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("BEDROCK_REGION_NAME", "AWS_REGION", "AWS_DEFAULT_REGION"),
+        description="AWS Bedrock region name",
+    )
+
+    # -------------------------------------------------------------------------
+    # 6. MCP Server Settings
+    # -------------------------------------------------------------------------
+    mcp_server_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("AX_MCP_SERVER_URL", "MCP_SERVER_URL"),
+        description="Model Context Protocol (MCP) server endpoint URL",
+    )
+    mcp_server_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("AX_MCP_SERVER_API_KEY", "MCP_SERVER_API_KEY"),
+        description="Authentication API key for MCP server",
+    )
+    mcp_server_name: Optional[str] = Field(
+        default="agentforge-mcp",
+        validation_alias=AliasChoices("AX_MCP_SERVER_NAME", "MCP_SERVER_NAME"),
+        description="Registered identifier for the MCP server",
+    )
+
+    # -------------------------------------------------------------------------
+    # 7. Langfuse Tracing Settings
+    # -------------------------------------------------------------------------
+    langfuse_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LANGFUSE_ENABLED"),
+        description="Toggle for Langfuse LLM tracing and observability",
+    )
+    langfuse_public_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LANGFUSE_PUBLIC_KEY"),
+        description="Langfuse public API key",
+    )
+    langfuse_secret_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LANGFUSE_SECRET_KEY"),
+        description="Langfuse secret API key",
+    )
+    langfuse_base_url: Optional[str] = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("langfuse_base_url", "langfuse_host", "LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
+        description="Base URL for Langfuse server",
+    )
+
+    # -------------------------------------------------------------------------
+    # 8. OpenSearch Settings
+    # -------------------------------------------------------------------------
+    opensearch_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_URL"),
+        description="Full OpenSearch endpoint URL. If omitted, built from components.",
+    )
+    opensearch_host: str = Field(
+        default="localhost",
+        validation_alias=AliasChoices("OPENSEARCH_HOST"),
+        description="OpenSearch server host or IP",
+    )
+    opensearch_port: int = Field(
+        default=9200,
+        validation_alias=AliasChoices("OPENSEARCH_PORT"),
+        description="OpenSearch server port",
+    )
+    opensearch_username: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_USERNAME", "OPENSEARCH_USER"),
+        description="OpenSearch authentication username",
+    )
+    opensearch_password: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_PASSWORD"),
+        description="OpenSearch authentication password",
+    )
+    opensearch_use_ssl: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OPENSEARCH_USE_SSL", "OPENSEARCH_SSL"),
+        description="Enable SSL/TLS for OpenSearch connection",
+    )
+    opensearch_verify_certs: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OPENSEARCH_VERIFY_CERTS"),
+        description="Verify SSL certificates for OpenSearch",
+    )
+    opensearch_index_prefix: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_INDEX_PREFIX"),
+        description="Prefix for OpenSearch indices",
+    )
 
     # -------------------------------------------------------------------------
     # Validators
@@ -286,6 +413,93 @@ class BaseAppSettings(BaseSettings):
         scheme = "rediss" if self.redis_ssl else "redis"
         auth = f":{self.redis_password}@" if self.redis_password else ""
         return f"{scheme}://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def resolved_opensearch_url(self) -> str:
+        """Construct the OpenSearch URL if not explicitly configured."""
+        if self.opensearch_url and self.opensearch_url.strip():
+            return self.opensearch_url.strip().rstrip("/")
+
+        raw_host = (self.opensearch_host or "").strip()
+        if not raw_host:
+            raw_host = "localhost"
+
+        scheme = "https" if self.opensearch_use_ssl else "http"
+
+        if raw_host.startswith("https://"):
+            scheme = "https"
+            raw_host = raw_host[8:]
+        elif raw_host.startswith("http://"):
+            scheme = "http"
+            raw_host = raw_host[7:]
+
+        # Strip fragment, query parameters, and trailing path
+        raw_host = raw_host.split("#")[0].split("?")[0].split("/")[0]
+
+        # Extract embedded userinfo if present (e.g. user:pass@host)
+        extracted_user = None
+        extracted_pass = None
+        if "@" in raw_host:
+            auth_part, host_part = raw_host.rsplit("@", 1)
+            raw_host = host_part
+            if ":" in auth_part:
+                extracted_user, extracted_pass = auth_part.split(":", 1)
+            else:
+                extracted_user = auth_part
+
+        username = self.opensearch_username if self.opensearch_username is not None else extracted_user
+        password = self.opensearch_password if self.opensearch_password is not None else extracted_pass
+
+        # Handle bracketed IPv6, unbracketed IPv6, and hostname:port
+        if raw_host.startswith("["):
+            if "]:" in raw_host:
+                parts = raw_host.split("]:", 1)
+                host = parts[0] + "]"
+                try:
+                    port = int(parts[1])
+                except ValueError:
+                    port = self.opensearch_port
+            else:
+                host = raw_host
+                port = self.opensearch_port
+        elif raw_host.count(":") > 1:
+            # Unbracketed IPv6 address: wrap in brackets per RFC 3986
+            host = f"[{raw_host}]"
+            port = self.opensearch_port
+        elif ":" in raw_host:
+            parts = raw_host.split(":", 1)
+            host = parts[0]
+            try:
+                port = int(parts[1])
+            except ValueError:
+                port = self.opensearch_port
+        else:
+            host = raw_host
+            port = self.opensearch_port
+
+        if not host:
+            host = "localhost"
+
+        if username and password:
+            auth = f"{username}:{password}@"
+        elif username:
+            auth = f"{username}@"
+        elif password:
+            auth = f":{password}@"
+        else:
+            auth = ""
+
+        return f"{scheme}://{auth}{host}:{port}"
+
+    @property
+    def langfuse_host(self) -> Optional[str]:
+        """Convenience alias for langfuse_base_url."""
+        return self.langfuse_base_url
+
+    @langfuse_host.setter
+    def langfuse_host(self, value: Optional[str]) -> None:
+        self.langfuse_base_url = value
+
 
 
 @lru_cache()

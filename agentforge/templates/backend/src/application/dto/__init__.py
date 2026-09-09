@@ -2,6 +2,7 @@
 
 from .auth_dto import (
     ChangePasswordRequest,
+    ChangePasswordResponse,
     LoginRequest,
     SessionInfoResponse,
     TokenResponse,
@@ -25,6 +26,7 @@ __all__ = [
     "TokenResponse",
     "SessionInfoResponse",
     "ChangePasswordRequest",
+    "ChangePasswordResponse",
     "CreateUserRequest",
     "UpdateUserRequest",
     "UserResponse",

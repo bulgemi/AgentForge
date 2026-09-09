@@ -2,8 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Terminal as TerminalIcon } from 'lucide-react';
 import { InterruptApprovalCard } from './InterruptApprovalCard';
 import { TerminalConsole } from './TerminalConsole';
+import { MarkdownContent } from './MarkdownContent';
+import { API_BASE } from '../../api/client';
+import { useAuth } from '../../auth/AuthProvider';
 
-export function ChatAssistant({ chatId = 'default-chat' }) {
+export function ChatAssistant({ chatId = 'default-chat', headerActions = null }) {
+  const { logout } = useAuth() || {};
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -34,7 +38,7 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
 
     const token = localStorage.getItem('access_token');
     try {
-      const response = await fetch(`/api/v1/chats/${chatId}/stream`, {
+      const response = await fetch(`${API_BASE}/chats/${chatId}/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,8 +47,37 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
         body: JSON.stringify({ message: userMessage.content }),
       });
 
+      if (response.status === 401) {
+        if (logout) {
+          logout();
+        } else {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          window.location.reload();
+        }
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+        let errorDetail = '';
+        try {
+          const errData = await response.json();
+          errorDetail = errData.detail || '';
+        } catch {
+          // Fallback if not JSON
+        }
+
+        if (response.status === 403) {
+          if (errorDetail.includes('Account is not active')) {
+            throw new Error('계정이 비활성 상태이거나 임시 비밀번호 변경이 필요합니다.');
+          }
+          if (errorDetail.includes('Account is locked or suspended')) {
+            throw new Error('계정이 잠겼거나 정지되었습니다. 관리자에게 문의하세요.');
+          }
+          throw new Error(errorDetail || '접근 권한이 없습니다 (403 Forbidden).');
+        }
+
+        throw new Error(errorDetail || `서버 오류가 발생했습니다 (${response.status}).`);
       }
 
       const reader = response.body.getReader();
@@ -62,29 +95,53 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
         buffer = lines.pop() || '';
 
         for (const block of lines) {
+          if (!block.trim()) continue;
           const blockLines = block.split('\n');
           let eventType = 'token';
-          let eventData = '';
+          const dataLines = [];
+
           for (const line of blockLines) {
-            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-            if (line.startsWith('data: ')) eventData = line.slice(6).trim();
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+              dataLines.push(line.slice(6));
+            }
+          }
+
+          const rawData = dataLines.join('\n').trim();
+          if (!rawData && eventType !== 'done') continue;
+
+          let parsedPayload = null;
+          try {
+            parsedPayload = JSON.parse(rawData);
+          } catch {
+            // rawData is plain text
           }
 
           if (eventType === 'token') {
-            assistantMsg.content += eventData;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: assistantMsg.content } : m))
-            );
+            const tokenText = parsedPayload && typeof parsedPayload === 'object'
+              ? (parsedPayload.content ?? parsedPayload.data ?? '')
+              : rawData;
+
+            if (tokenText) {
+              assistantMsg.content += tokenText;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: assistantMsg.content } : m))
+              );
+            }
           } else if (eventType === 'meta') {
+            const metaText = parsedPayload && typeof parsedPayload === 'object'
+              ? (parsedPayload.data ? JSON.stringify(parsedPayload.data) : JSON.stringify(parsedPayload))
+              : rawData;
             setLogs((prev) => [
               ...prev,
-              { time: new Date().toLocaleTimeString(), text: `Meta: ${eventData}`, type: 'meta' },
+              { time: new Date().toLocaleTimeString(), text: `Meta: ${metaText}`, type: 'meta' },
             ]);
           } else if (eventType === 'interrupt') {
-            try {
-              const interruptObj = JSON.parse(eventData);
-              setPendingInterrupt(interruptObj);
-            } catch (err) {}
+            const interruptObj = (parsedPayload && typeof parsedPayload === 'object') ? parsedPayload : rawData;
+            setPendingInterrupt(interruptObj);
+          } else if (eventType === 'done') {
+            // Stream completed
           }
         }
       }
@@ -100,14 +157,28 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
 
   const handleResolveInterrupt = async (interruptId, decision) => {
     const token = localStorage.getItem('access_token');
-    await fetch(`/api/v1/chats/${chatId}/interrupts/${interruptId}/resolve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ decision }),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/chats/${chatId}/interrupts/${interruptId}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ decision }),
+      });
+      if (res.status === 401) {
+        if (logout) {
+          logout();
+        } else {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          window.location.reload();
+        }
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to resolve interrupt:', err);
+    }
     setPendingInterrupt(null);
   };
 
@@ -133,6 +204,7 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
             <TerminalIcon className="h-3.5 w-3.5" />
             Console
           </button>
+          {headerActions}
         </div>
       </header>
 
@@ -169,7 +241,11 @@ export function ChatAssistant({ chatId = 'default-chat' }) {
                         : 'border border-gray-200 bg-white text-gray-800'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{m.content}</div>
+                    {m.role === 'user' ? (
+                      <div className="whitespace-pre-wrap">{m.content}</div>
+                    ) : (
+                      <MarkdownContent content={m.content} />
+                    )}
                   </div>
                   {m.role === 'user' && (
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-300 text-gray-700 text-xs font-bold">

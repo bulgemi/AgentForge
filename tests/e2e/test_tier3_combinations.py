@@ -11,7 +11,7 @@ Verifies pairwise feature interactions and cross-subsystem contracts:
 import asyncio
 import os
 import shutil
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import pytest
 from jinja2 import Template

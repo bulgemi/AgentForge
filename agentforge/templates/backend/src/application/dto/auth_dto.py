@@ -20,6 +20,7 @@ class TokenResponse(BaseModel):
     user_id: str
     username: str
     role: str
+    status: str = "active"
 
 
 class SessionInfoResponse(BaseModel):
@@ -27,6 +28,7 @@ class SessionInfoResponse(BaseModel):
     user_id: str
     username: str
     role: str
+    status: str = "active"
     auth_type: str
     expires_at: str
 
@@ -34,3 +36,8 @@ class SessionInfoResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class ChangePasswordResponse(BaseModel):
+    message: str = "비밀번호가 성공적으로 변경되었습니다."
+    status: str = "active"
