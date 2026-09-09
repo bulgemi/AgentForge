@@ -28,10 +28,20 @@ export function AuthProvider({ children }) {
       id: data.user_id,
       username: data.username,
       role: data.role,
+      status: data.status || 'active',
     };
     localStorage.setItem('user', JSON.stringify(userInfo));
     setUser(userInfo);
     return userInfo;
+  };
+
+  const updateUserStatus = (newStatus) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, status: newStatus };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const logout = () => {
@@ -42,7 +52,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUserStatus }}>
       {children}
     </AuthContext.Provider>
   );
