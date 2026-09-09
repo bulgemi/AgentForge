@@ -25,12 +25,12 @@ async def get_auth_runtime(request: Request) -> AuthRuntime:
     return runtime
 
 
-async def get_current_user(
+async def get_authenticated_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     runtime: Annotated[AuthRuntime, Depends(get_auth_runtime)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> User:
-    """Extract and validate JWT Bearer token, verifying session and user active status."""
+    """Extract and validate JWT Bearer token, allowing PENDING_PASSWORD_CHANGE for credential updates."""
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,9 +62,18 @@ async def get_current_user(
     user = await repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found.")
+    if user.status in (UserStatus.LOCKED, UserStatus.SUSPENDED):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is locked or suspended.")
+
+    return user
+
+
+async def get_current_user(
+    user: Annotated[User, Depends(get_authenticated_user)],
+) -> User:
+    """Validate that authenticated user is strictly ACTIVE."""
     if user.status != UserStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is not active.")
-
     return user
 
 

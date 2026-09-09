@@ -59,7 +59,25 @@ export function ChatAssistant({ chatId = 'default-chat', headerActions = null })
       }
 
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+        let errorDetail = '';
+        try {
+          const errData = await response.json();
+          errorDetail = errData.detail || '';
+        } catch {
+          // Fallback if not JSON
+        }
+
+        if (response.status === 403) {
+          if (errorDetail.includes('Account is not active')) {
+            throw new Error('계정이 비활성 상태이거나 임시 비밀번호 변경이 필요합니다.');
+          }
+          if (errorDetail.includes('Account is locked or suspended')) {
+            throw new Error('계정이 잠겼거나 정지되었습니다. 관리자에게 문의하세요.');
+          }
+          throw new Error(errorDetail || '접근 권한이 없습니다 (403 Forbidden).');
+        }
+
+        throw new Error(errorDetail || `서버 오류가 발생했습니다 (${response.status}).`);
       }
 
       const reader = response.body.getReader();
