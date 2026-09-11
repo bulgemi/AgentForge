@@ -297,6 +297,11 @@ cd ../frontend
 npm install
 npm run dev
 ```
+
+### 7. Frontend UI/UX Design System & AI Coding Agent Guidelines
+For frontend development or when pairing with AI Coding Agents (Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity):
+- Refer to [`frontend/DESIGN.md`](frontend/DESIGN.md) for official brand color tokens (SK Red `#E1002A`, SK Orange `#F58220`), component standards, icon rules (`lucide-react`), and strict coding constraints.
+- Refer to [`frontend/README.md`](frontend/README.md) for frontend architecture and AI prompt templates.
 """
             readme_path.write_text(readme_content, encoding="utf-8")
 
