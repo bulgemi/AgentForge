@@ -10,23 +10,43 @@ AgentForge는 엔터프라이즈 환경에서 검증된 **Clean Architecture 모
 
 ## 1. 클린 아키텍처 계층 구조 (Clean Architecture)
 
-생성된 백엔드(`backend/src/`)는 의존성 역전 원칙(DIP)에 따라 내부 도메인이 외부 프레임워크나 데이터베이스에 의존하지 않도록 계층화되어 있습니다:
+생성된 백엔드(`backend/src/`)는 의존성 역전 원칙(DIP)에 따라 내부 도메인이 외부 프레임워크나 데이터베이스에 의존하지 않도록 엄격히 계층화되어 있습니다:
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│                   Infrastructure Layer                   │
-│   (FastAPI REST 라우터, SQLModel ORM, Redis, LDAP, SAML)  │
-└────────────────────────────┬─────────────────────────────┘
-                             │ calls
-┌────────────────────────────▼─────────────────────────────┐
-│                    Application Layer                     │
-│          (AuthService, UserService, ChatService)         │
-└────────────────────────────┬─────────────────────────────┘
-                             │ depends on
-┌────────────────────────────▼─────────────────────────────┐
-│                      Domain Layer                        │
-│          (Entities: User, Session, Chat & Interfaces)    │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Infrastructure["1. Infrastructure Layer (외부 프레임워크 & 어댑터)"]
+        FastAPI["FastAPI REST 라우터"]
+        SQLModel["SQLModel ORM (PostgreSQL 16)"]
+        Redis["Redis 7.4 (분산 세션 & Rate Limit)"]
+        AuthAdapters["LDAP3 / PySAML2 / Native JWT"]
+        AgentAdapters["Agent Adapters (LangGraph, Bedrock 등)"]
+    end
+
+    subgraph Application["2. Application Layer (유스케이스 & 오케스트레이션)"]
+        AuthService["AuthService"]
+        UserService["UserService"]
+        ChatService["ChatService (스트리밍 파이프라인)"]
+        DTOs["Request / Response DTOs"]
+    end
+
+    subgraph Domain["3. Domain Layer (핵심 비즈니스 엔티티 & 규칙)"]
+        User["User 엔티티"]
+        Session["AuthSession 엔티티"]
+        Chat["Chat / Message 엔티티"]
+        DomainInterfaces["도메인 인터페이스 (Port)"]
+    end
+
+    subgraph Core["Standalone Core Engine (100% 독립 런타임)"]
+        BaseAdapter["BaseAgentAdapter"]
+        SSEStreamer["SSE 실시간 스트리머"]
+        DBConnector["Database 비동기 커넥터"]
+        Config["BaseAppSettings"]
+    end
+
+    Infrastructure -->|"호출 (Calls) / 의존"| Application
+    Application -->|"도메인 모델 참조 (Depends on)"| Domain
+    Infrastructure -.->|"인터페이스 구현 (Implements)"| DomainInterfaces
+    Infrastructure -->|"상속 / 활용"| Core
 ```
 
 | 계층 (Layer) | 위치 | 책임 및 구현 내용 |
@@ -41,6 +61,37 @@ AgentForge는 엔터프라이즈 환경에서 검증된 **Clean Architecture 모
 ## 2. 지원 에이전트 프레임워크 5종 (`BaseAgentAdapter`)
 
 AgentForge는 백엔드 표준 어댑터(`BaseAgentAdapter`) 패턴을 내장하여, 어떤 프레임워크를 선택하더라도 클라이언트와 표준화된 규격으로 통신합니다.
+
+```mermaid
+flowchart LR
+    Client["웹 클라이언트 / 외부 시스템"]
+
+    subgraph UnifiedAPI["FastAPI 표준 REST & SSE 엔드포인트"]
+        Invoke["POST /invoke (동기 블로킹)"]
+        Stream["POST /stream (SSE 스트리밍)"]
+        Health["GET /health (상태 헬스체크)"]
+    end
+
+    subgraph CoreEngine["Standalone Core"]
+        Adapter["BaseAgentAdapter<br/>(표준 추상화 인터페이스)"]
+    end
+
+    subgraph Adapters["선택된 에이전트 프레임워크 구현체"]
+        LG["1. LangGraph Adapter"]
+        LC["2. LangChain Adapter"]
+        DA["3. DeepAgent Adapter"]
+        ADK["4. ADK Adapter"]
+        BR["5. AWS Bedrock Adapter"]
+    end
+
+    Client --> UnifiedAPI
+    UnifiedAPI --> Adapter
+    Adapter --> LG
+    Adapter --> LC
+    Adapter --> DA
+    Adapter --> ADK
+    Adapter --> BR
+```
 
 | 프레임워크 | 설명 | 특징 및 추천 활용처 | 공식 링크 |
 | :--- | :--- | :--- | :--- |
@@ -63,9 +114,23 @@ AgentForge는 백엔드 표준 어댑터(`BaseAgentAdapter`) 패턴을 내장하
 AgentForge의 프론트엔드는 AI 코딩 도구(Cursor, Windsurf, Claude Code, Antigravity)와의 정밀한 협업을 위해 **Spec-Driven UI Development** 방법론을 채택하고 있습니다.
 
 ### 🔄 개발 워크플로우 3단계
-```
-[1단계: 프로젝트 고유 스펙 정의] ──► [2단계: AI 에이전트에게 지시] ──► [3단계: 일관된 컴포넌트 생성]
-   (frontend/DESIGN.md 수정)            (DESIGN.md를 SSOT로 프롬프트)        (디자인 토큰/품질 제약 준수)
+
+```mermaid
+flowchart LR
+    subgraph Step1["1단계: 프로젝트 스펙 정의"]
+        DesignDoc["frontend/DESIGN.md<br/>• 브랜드 컬러 & 8pt 그리드<br/>• 컴포넌트 규격 & 인터랙션<br/>• 품질 제약 (Do's & Don'ts)"]
+    end
+
+    subgraph Step2["2단계: AI 에이전트 지시"]
+        AIAgent["AI 코딩 어시스턴트<br/>(Cursor, Claude Code, Antigravity)<br/>DESIGN.md를 SSOT로 컨텍스트 주입"]
+    end
+
+    subgraph Step3["3단계: 일관된 UI 생성"]
+        UIComponents["React / Vite 컴포넌트<br/>• 디자인 토큰 100% 준수<br/>• 임의의 인라인 스타일 배제<br/>• 일관된 엔터프라이즈 UX 유지"]
+    end
+
+    DesignDoc -->|"프롬프트에 SSOT로 참조"| AIAgent
+    AIAgent -->|"규격화된 컴포넌트 생성"| UIComponents
 ```
 
 1. **1단계: 프로젝트 고유 스펙 정의 (`frontend/DESIGN.md` 수정)**
@@ -80,9 +145,35 @@ AgentForge의 프론트엔드는 AI 코딩 도구(Cursor, Windsurf, Claude Code,
 
 ---
 
-## 4. 엔터프라이즈 기능 (Enterprise Features)
+## 4. 엔터프라이즈 기능 및 시스템 인터랙션 (Enterprise Features)
 
-생성된 프로젝트는 엔터프라이즈 상용 서비스에 필수적인 기능들이 기본 활성화되어 있습니다:
+생성된 프로젝트는 엔터프라이즈 상용 서비스에 필수적인 기능들이 기본 통합되어 유기적으로 통신합니다:
+
+```mermaid
+graph TD
+    subgraph Client["프론트엔드 (Vite + React)"]
+        ChatUI["사용자 채팅 포털 (/index.html)"]
+        AdminUI["관리자 거버넌스 콘솔 (/admin.html)"]
+    end
+
+    subgraph Backend["백엔드 (FastAPI Clean Architecture)"]
+        API["REST & SSE Streaming API"]
+        AuthMod["Multi-Auth (ID/PW, LDAP, SAML)"]
+    end
+
+    subgraph Infra["엔터프라이즈 인프라 스택"]
+        PG[("PostgreSQL 16<br/>(RDBMS 영구 저장)")]
+        RD[("Redis 7.4<br/>(분산 세션 & Rate Limit)")]
+        LF["Langfuse v3<br/>(LLM 트레이스 & 비용 모니터링)"]
+        OS[("OpenSearch 2.19<br/>(k-NN 벡터 & 감사 로그)")]
+    end
+
+    Client <-->|"HTTP REST / SSE 실시간 스트리밍"| Backend
+    Backend <-->|"비동기 SQLModel (asyncpg)"| PG
+    Backend <-->|"세션 확인 & 토큰 블랙리스트"| RD
+    Backend -.->|"LLM 호출 메트릭 자동 전송"| LF
+    Backend <-->|"벡터 인덱싱 & 감사 쿼리"| OS
+```
 
 - **엔터프라이즈 멀티 인증**: 로컬 DB(ID/PW, Argon2id 암호화 해싱), LDAP / Active Directory 바인딩, SAML 2.0 IdP 싱글사인온(SSO)
 - **분산 세션 & 보안**: Redis 7.4 기반 세션 만료, 동시 로그인 제한, 토큰 블랙리스트, Native JWT 발급
