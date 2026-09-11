@@ -820,4 +820,26 @@ def test_scaffolding_engine_copies_agent_skills():
         assert "gh auth status" in spec_content
         assert ".github/issues/" in spec_content
 
+        # Check root agent bridge configuration files (Zero-Prompt Automation)
+        agents_md = project_dir / "AGENTS.md"
+        claude_md = project_dir / "CLAUDE.md"
+        cursorrules = project_dir / ".cursorrules"
+        assert agents_md.is_file()
+        assert claude_md.is_file()
+        assert cursorrules.is_file()
+
+        agents_text = agents_md.read_text(encoding="utf-8")
+        assert "Zero-Prompt Intent Routing" in agents_text
+        assert "feature-development" in agents_text
+        assert "feature-enhancement" in agents_text
+        assert "bugfix" in agents_text
+
+        claude_text = claude_md.read_text(encoding="utf-8")
+        assert "AgentForge AI Developer Harness" in claude_text
+        assert "AGENTS.md" in claude_text
+
+        cursor_text = cursorrules.read_text(encoding="utf-8")
+        assert "Cursor Rules" in cursor_text
+        assert ".agents/skills/" in cursor_text
+
 
