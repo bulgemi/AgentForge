@@ -299,9 +299,10 @@ npm run dev
 ```
 
 ### 7. Frontend UI/UX Design System & AI Coding Agent Guidelines
-For frontend development or when pairing with AI Coding Agents (Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity):
-- Refer to [`frontend/DESIGN.md`](frontend/DESIGN.md) for official brand color tokens (SK Red `#E1002A`, SK Orange `#F58220`), component standards, icon rules (`lucide-react`), and strict coding constraints.
-- Refer to [`frontend/README.md`](frontend/README.md) for frontend architecture and AI prompt templates.
+AgentForge adopts a **Spec-Driven UI Development** methodology:
+- Edit [`frontend/DESIGN.md`](frontend/DESIGN.md) to define your project's unique domain requirements, branding, and UI specifications.
+- When pairing with AI Coding Agents (Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity), point the agent to [`frontend/DESIGN.md`](frontend/DESIGN.md) as the Single Source of Truth for generating and maintaining consistent, spec-compliant UI components.
+- Refer to [`frontend/README.md`](frontend/README.md) for frontend architecture and prompt instructions.
 """
             readme_path.write_text(readme_content, encoding="utf-8")
 

@@ -1,5 +1,12 @@
 # {{ project_name }} Frontend Design System & AI Agent Guidelines
 
+> 📘 **Project Design Specification (Single Source of Truth)**  
+> 이 문서는 **{{ project_name }}** 프로젝트의 고유한 비즈니스/도메인 요구사항에 맞추어 UI/UX를 기획·정의하는 **표준 설계 명세서**입니다.  
+> 
+> - **프로젝트 맞춤 편집**: 프로젝트의 브랜드 색상, 타겟 사용자, 화면 레이아웃, 커스텀 컴포넌트 요건에 맞게 본 문서를 자유롭게 수정·확장하십시오.
+> - **AI Coding Agent 협업**: Cursor, Windsurf, Claude Code, GitHub Copilot 등 AI 에이전트에게 프론트엔드 작업을 지시할 때 이 `DESIGN.md`를 필독하도록 설정하여, 임의의 스타일 파편화 없이 **프로젝트 요구사항에 정확히 부합하는 일관된 UI**를 자동 생성·유지할 수 있습니다.
+> - **기본 제공 베이스라인**: 아래에 기술된 규칙(Tailwind 토큰, 8pt 그리드, Lucide 아이콘, 스트리밍 인터랙션 등)은 즉시 활용 가능한 프로덕션 검증 베이스라인 템플릿입니다.
+
 This document defines the official design system, UI/UX conventions, component standards, and AI Coding Agent rules for **{{ project_name }}**.
 
 All human engineers and **AI Coding Agents** (Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity, etc.) **MUST** read and adhere to the design rules defined here when creating, modifying, or refactoring frontend code.

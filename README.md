@@ -8,7 +8,7 @@
 
   [![Python Version](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-  [![Design System](https://img.shields.io/badge/UI%2FUX-DESIGN.md%20%7C%20AI%20Agent%20Ready-blueviolet.svg)](#-uiux-디자인-시스템--ai-coding-agent-협업-가이드-frontenddesignmd)
+  [![Spec-Driven UI](https://img.shields.io/badge/UI%2FUX-Spec--Driven%20(DESIGN.md)-blueviolet.svg)](#-스펙-기반-ui-개발--ai-coding-agent-협업-체계-frontenddesignmd)
   [![Architecture](https://img.shields.io/badge/Architecture-Fullstack%20Monorepo-green.svg)](#--생성되는-프로젝트-구조-user-project-layout)
   [![Frameworks](https://img.shields.io/badge/Supported%20Frameworks-LangChain%20%7C%20LangGraph%20%7C%20DeepAgent%20%7C%20ADK%20%7C%20Bedrock-orange.svg)](#--지원-에이전트-프레임워크-5종)
   [![Quickstart](https://img.shields.io/badge/Quickstart-3--Min%20Guide-FF5722.svg)](docs/quickstart.md)
@@ -40,7 +40,7 @@ cd my-agent && ./run.sh        # Windows: run.bat
 1. [🌟 개요 (Overview)](#-개요-overview)
    - [✨ 왜 AgentForge인가요? (핵심 차별화 강점)](#-왜-agentforge인가요-핵심-차별화-강점)
 2. [🖥️ 생성 프로젝트 UI 화면 둘러보기 (Application UI Screens)](#️-생성-프로젝트-ui-화면-둘러보기-application-ui-screens)
-   - [🎨 UI/UX 디자인 시스템 & AI Coding Agent 협업 가이드 (`frontend/DESIGN.md`)](#-uiux-디자인-시스템--ai-coding-agent-협업-가이드-frontenddesignmd)
+   - [🎨 스펙 기반 UI 개발 & AI Coding Agent 협업 체계 (`frontend/DESIGN.md`)](#-스펙-기반-ui-개발--ai-coding-agent-협업-체계-frontenddesignmd)
 3. [🤖 지원 에이전트 프레임워크 5종](#-지원-에이전트-프레임워크-5종)
 4. [⚙️ 스캐폴딩 생성기(Scaffolding Generator) 설치 및 사용 가이드](#️-스캐폴딩-생성기scaffolding-generator-설치-및-사용-가이드)
    - [1. 설치 방법 (Installation)](#1-설치-방법-installation)
@@ -111,40 +111,45 @@ AgentForge로 생성된 프로젝트는 추가 프론트엔드 작업 없이 즉
 
 ---
 
-### 🎨 UI/UX 디자인 시스템 & AI Coding Agent 협업 가이드 (`frontend/DESIGN.md`)
+### 🎨 스펙 기반 UI 개발 & AI Coding Agent 협업 체계 (`frontend/DESIGN.md`)
 
-AgentForge로 생성되는 모든 React 프로젝트는 프론트엔드 루트 디렉토리에 공식 디자인 시스템 및 AI 에이전트 개발 규격서인 [**`frontend/DESIGN.md`**](agentforge/templates/frontend/react-vite/DESIGN.md)를 기본 탑재합니다.
+AgentForge는 **"프로젝트 고유의 요구사항에 맞추어 UI 명세를 정의하고, 이를 바탕으로 AI 코딩 에이전트가 오차 없이 맞춤형 UI를 개발하도록 지원"**하는 **스펙 기반 UI 개발(Spec-Driven UI Development)** 방법론을 기본 제공합니다.
 
-개발자뿐만 아니라 **Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity** 등 **AI 코딩 에이전트**를 활용하여 프론트엔드를 확장·수정할 때, 스타일 파편화나 디자인 품질 저하 없이 일관된 엔터프라이즈급 UI/UX를 자동으로 생성·유지할 수 있도록 설계되었습니다.
+프로젝트를 생성하면 프론트엔드 루트 디렉토리에 표준 설계 명세서인 [**`frontend/DESIGN.md`**](agentforge/templates/frontend/react-vite/DESIGN.md) 템플릿이 자동으로 배치됩니다.  
+개발자는 자신의 프로젝트 요건(도메인 특성, 브랜드 테마, 화면 레이아웃, 커스텀 컴포넌트)에 맞게 `DESIGN.md`를 작성하고, **Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity** 등 AI 코딩 에이전트에게 이 문서를 기준으로 개발을 지시함으로써 **스타일 파편화나 환각 없이 프로젝트 요구사항에 정확히 부합하는 일관된 UI/UX를 신속하게 구현**할 수 있습니다.
 
-#### ✨ 핵심 디자인 규격 & AI 가이드라인
+```
+ ┌────────────────────────┐      ┌────────────────────────┐      ┌────────────────────────┐
+ │   1단계: 스펙 정의     │ ───> │ 2단계: AI 에이전트 지시 │ ───> │ 3단계: 일관된 UI 생성  │
+ │  프로젝트 요건에 맞게   │      │ Cursor / Claude Code에 │      │  스펙을 100% 준수한     │
+ │   DESIGN.md 작성/수정  │      │  DESIGN.md 기준 지시   │      │   맞춤형 프론트엔드    │
+ └────────────────────────┘      └────────────────────────┘      └────────────────────────┘
+```
 
-1. **브랜드 & 컬러 토큰 (Design Tokens)**
-   - **SK Brand Identity**: `skred` (`#E1002A`), `skorange` (`#F58220`)
-   - **브랜드 그라디언트 CTA**: `bg-gradient-to-r from-skred to-skorange text-white` (주요 전송 버튼, 사용자 챗 버블)
-   - **Tailwind 중립 스케일**: Gray 50 (앱 배경) ~ Gray 950 (터미널 콘솔)
-   - **시맨틱 상태 색상**: 성공(`emerald-600`), 경고(`amber-600`), 위험(`red-600`), 정보(`blue-600`)
+#### 🔄 3단계 스펙 기반 UI 개발 워크플로우
 
-2. **8pt 그리드 & 타이포그래피**
-   - **여백 체계**: 4px/8px 배수 (`p-2`, `p-4`, `p-6`, `gap-3` 등)
-   - **라운딩 표준**: 인풋/버튼/뱃지 (`rounded-xl`), 카드/모달/메시지 버블 (`rounded-2xl`)
-   - **폰트**: 본문(Inter/시스템 산세리프), 코드/로그(`font-mono`)
+1. **1단계: 프로젝트 요건 정의 (`frontend/DESIGN.md` 작성 및 커스터마이징)**
+   - 프로젝트 생성 후 `frontend/DESIGN.md`를 열어 비즈니스 도메인과 고유 요구사항에 맞게 스펙을 편집합니다.
+   - **브랜드 & 컬러 팔레트**: 프로젝트의 메인/서브 브랜드 색상 및 시맨틱 상태 컬러 정의 (기본 제공되는 SK Red/Orange는 즉시 실행 가능한 프로덕션 베이스라인 예시입니다).
+   - **화면 및 컴포넌트 스펙**: 대상 사용자 경험에 필요한 카드, 모달, 폼, 데이터 테이블 등의 세부 규격 기술.
+   - **에이전트 인터랙션 요건**: 실시간 토큰 스트리밍, Human-in-the-Loop(HITL) 도구 승인, 실행 로그 콘솔 등 프로젝트에 필요한 인터랙션 규칙 명시.
 
-3. **AI 에이전트 특화 인터랙션 패턴**
-   - **대화 버블**: 사용자 우측 그라디언트 버블 vs 어시스턴트 좌측 화이트 카드 버블
-   - **SSE 실시간 스트리밍**: 토큰 수신 중 깜빡이는 커서(`●`) 인디케이터 및 자동 스크롤
-   - **HITL 도구 승인 카드**: 위험 작업 실행 전 사람의 승인을 대기하는 카드 (`InterruptApprovalCard`)
-   - **마크다운 & 코드 하이라이팅**: 코드 구문 강조 및 원클릭 복사 바 기본 내장 (`MarkdownContent`)
-   - **다크 터미널 콘솔**: LLM 생각(Thinking), 도구 호출, 시스템 로그를 확인하는 슬라이드 드로어 (`TerminalConsole`)
+2. **2단계: AI 에이전트 지시 (Single Source of Truth 연동)**
+   - AI 코딩 도구(Cursor, Windsurf, Claude Code 등)에게 신규 컴포넌트나 페이지 개발을 요청할 때 `frontend/DESIGN.md`를 단일 진실 공급원(SSOT)으로 지정합니다.
+   - **프롬프트 예시**:
+     > *"Follow the project requirements and UI specifications in `frontend/DESIGN.md`. Implement the new user profile dashboard adhering strictly to our defined color tokens, 8pt spacing, Lucide icons, and component standards."*
+   - 프로젝트의 `.cursorrules` 또는 프롬프트 지침에 `DESIGN.md` 준수 규칙을 등록하여 모든 작업에 자동 적용할 수도 있습니다.
 
-4. **엄격한 AI Coding Agent 제약 규칙 (Do's & Don'ts)**
-   - ❌ **임의의 hex 컬러 금지**: `bg-[#1a2b3c]` 등 비표준 색상 사용 금지 (Tailwind 및 SK 토큰만 허용)
-   - ❌ **외부 아이콘 라이브러리 혼용 금지**: 오직 [`lucide-react`](https://lucide.dev/) 단일 패밀리만 사용
-   - ❌ **인라인 스타일 지양**: `style={{ ... }}` 대신 Tailwind 유틸리티 클래스 사용
-   - ❌ **`<button>` 태그 타입 필수**: 반드시 `type="button"` 또는 `type="submit"` 명시
+3. **3단계: 일관된 UI 생성 및 지속적 유지보수 (Consistent Generation & Maintenance)**
+   - AI 에이전트는 `DESIGN.md`에 명시된 엄격한 제약 규칙(임의의 hex 클래스 금지, 단일 아이콘 패밀리 준수, 인라인 스타일 금지 등)을 준수하여 프로젝트 요건에 완벽히 부합하는 코드를 작성합니다.
+   - 향후 새로운 화면 추가나 리팩토링 시에도 `DESIGN.md`가 기준점이 되므로, 여러 작업자나 서로 다른 AI 도구를 교차 활용하더라도 전체 프로젝트의 UI/UX 일관성이 영구적으로 유지됩니다.
 
-> 💡 **AI 에이전트 활용 팁**: Cursor(`.cursorrules`), Windsurf, Claude Code 등에서 프론트엔드 작업 지시 시 아래 문장을 전달하면 에이전트가 `DESIGN.md`를 엄격히 준수합니다:  
-> *"Follow the strict UI/UX design specifications in `frontend/DESIGN.md`. Use Tailwind CSS with SK Brand tokens, Lucide React icons, and standard AI interaction components."*
+#### 📋 기본 제공 검증 베이스라인 (Baseline Starter Specification)
+템플릿에 기본 포함된 `DESIGN.md`는 프로젝트 즉시 가동을 위한 **프로덕션 레퍼런스 베이스라인**을 담고 있으며, 프로젝트 요구사항에 따라 완전히 재정의할 수 있습니다:
+- **디자인 토큰**: Tailwind 컬러 팔레트, 8pt 그리드 여백 배수 (`p-2`, `p-4`, `p-6`), 통일된 라운딩 (`rounded-xl`, `rounded-2xl`)
+- **아이콘 체계**: 단일 아이콘 패밀리 원칙 ([`lucide-react`](https://lucide.dev/))
+- **AI 인터랙션 패턴**: 실시간 SSE 스트리밍 버블, HITL 승인 카드(`InterruptApprovalCard`), 코드 구문 강조(`MarkdownContent`), 다크 콘솔 드로어(`TerminalConsole`)
+- **품질 제약 (Do's & Don'ts)**: 임의의 hex 컬러(`bg-[#...]`) 및 인라인 `style={{}}` 방지, 접근성 시맨틱 태그 준수
 
 ---
 
@@ -494,7 +499,7 @@ AgentForge로 생성되는 모든 프로젝트는 검증된 엔터프라이즈�
 | **프론트엔드 (Frontend)** | **사용자 채팅 포털** | SSE 실시간 스트리밍 대화창, 사고과정(Thinking) 터미널 콘솔, Human-in-the-loop 승인 카드 |
 | | **관리자 콘솔 포털** | 사용자 목록 조회(페이징/검색/필터), 신규 등록, 계정 잠금 해제, 임시 비밀번호 발급 |
 | | **멀티 엔트리포인트** | 1개 Vite 프로젝트에서 `/index.html`(사용자)과 `/admin.html`(관리자) 독립 번들링 서빙 |
-| | **디자인 시스템 & AI 가이드** | `frontend/DESIGN.md` 기반 SK 브랜드 토큰, 8pt 그리드, Lucide 단일 아이콘, AI Coding Agent Do's & Don'ts 규격 |
+| | **스펙 기반 UI 개발** | `frontend/DESIGN.md`에 프로젝트 요건을 정의하고, AI 에이전트가 이를 기반으로 일관된 맞춤형 UI/UX를 개발하도록 지원하는 체계 |
 
 ---
 
