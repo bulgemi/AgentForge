@@ -9,8 +9,9 @@
   [![Python Version](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   [![Spec-Driven UI](https://img.shields.io/badge/UI%2FUX-Spec--Driven%20(DESIGN.md)-blueviolet.svg)](#-스펙-기반-ui-개발--ai-coding-agent-협업-체계-frontenddesignmd)
+  [![AI Harness](https://img.shields.io/badge/AI%20Harness-.agents%2Fskills-orange.svg)](#️-ai-개발-하네스-developer-harness-skills-agentsskills)
   [![Architecture](https://img.shields.io/badge/Architecture-Fullstack%20Monorepo-green.svg)](#--생성되는-프로젝트-구조-user-project-layout)
-  [![Frameworks](https://img.shields.io/badge/Supported%20Frameworks-LangChain%20%7C%20LangGraph%20%7C%20DeepAgent%20%7C%20ADK%20%7C%20Bedrock-orange.svg)](#--지원-에이전트-프레임워크-5종)
+  [![Frameworks](https://img.shields.io/badge/Supported%20Frameworks-LangChain%20%7C%20LangGraph%20%7C%20DeepAgent%20%7C%20ADK%20%7C%20Bedrock-orange.svg)](#-지원-에이전트-프레임워크-5종)
   [![Quickstart](https://img.shields.io/badge/Quickstart-3--Min%20Guide-FF5722.svg)](docs/quickstart.md)
   [![UI Portal](https://img.shields.io/badge/UI-Multi--Entry%20Portal-8A2BE2.svg)](docs/quickstart.md#4단계-생성-프로젝트-화면-및-주요-기능-둘러보기-ui-walkthrough)
 </div>
@@ -41,32 +42,38 @@ cd my-agent && ./run.sh        # Windows: run.bat
    - [✨ 왜 AgentForge인가요? (핵심 차별화 강점)](#-왜-agentforge인가요-핵심-차별화-강점)
 2. [🖥️ 생성 프로젝트 UI 화면 둘러보기 (Application UI Screens)](#️-생성-프로젝트-ui-화면-둘러보기-application-ui-screens)
    - [🎨 스펙 기반 UI 개발 & AI Coding Agent 협업 체계 (`frontend/DESIGN.md`)](#-스펙-기반-ui-개발--ai-coding-agent-협업-체계-frontenddesignmd)
-3. [🤖 지원 에이전트 프레임워크 5종](#-지원-에이전트-프레임워크-5종)
-4. [⚙️ 스캐폴딩 생성기(Scaffolding Generator) 설치 및 사용 가이드](#️-스캐폴딩-생성기scaffolding-generator-설치-및-사용-가이드)
+3. [🛠️ AI 개발 하네스 (Developer Harness Skills: `.agents/skills`)](#️-ai-개발-하네스-developer-harness-skills-agentsskills)
+   - [1. 왜 개발 하네스인가요? (통제되지 않는 AI 코딩 방지)](#1-왜-개발-하네스인가요-통제되지-않는-ai-코딩-방지)
+   - [2. 3개 특화 개발 하네스 스킬](#2-3개-특화-개발-하네스-스킬)
+   - [3. 8단계 표준 워크플로우 파이프라인](#3-8단계-표준-워크플로우-파이프라인)
+   - [4. GitHub Issue & 단계별·상태별 태그(Label) 체계](#4-github-issue--단계별상태별-태그label-체계)
+   - [5. AI 에이전트 도구별 실전 활용 가이드](#5-ai-에이전트-도구별-실전-활용-가이드)
+4. [🤖 지원 에이전트 프레임워크 5종](#-지원-에이전트-프레임워크-5종)
+5. [⚙️ 스캐폴딩 생성기(Scaffolding Generator) 설치 및 사용 가이드](#️-스캐폴딩-생성기scaffolding-generator-설치-및-사용-가이드)
    - [1. 설치 방법 (Installation)](#1-설치-방법-installation)
    - [2. CLI 스캐폴딩 사용법 (`af new`)](#2-cli-스캐폴딩-사용법-agentforge-new--af-new)
    - [3. Python 프로그래밍 API (`ScaffoldingEngine`)](#3-python-프로그래밍-api-사용법-scaffoldingengine)
    - [4. 5단계 합성 메커니즘](#4-스캐폴딩-엔진의-5단계-합성-메커니즘)
-5. [🌱 환경 변수 관리 (.env & .env.sample)](#-환경-변수-관리-env--envsample)
+6. [🌱 환경 변수 관리 (.env & .env.sample)](#-환경-변수-관리-env--envsample)
    - [1. 백엔드 환경 변수](#1-백엔드-환경-변수-backendenv--backendenvsample)
    - [2. 프론트엔드 환경 변수](#2-프론트엔드-환경-변수-frontendenv--frontendenvsample)
    - [3. 보안 거버넌스 및 자동화 연동](#3-보안-거버넌스-및-자동화-연동)
-6. [💻 CLI 도구 명령어 (`agentforge` / `af`)](#-cli-도구-명령어-agentforge--af)
+7. [💻 CLI 도구 명령어 (`agentforge` / `af`)](#-cli-도구-명령어-agentforge--af)
    - [1) 로컬 개발 서버 실행 (`dev`)](#1-로컬-개발-서버-실행-dev-또는-원클릭-스크립트)
    - [2) Docker 이미지 빌드 (`build`)](#2-docker-이미지-빌드-build)
    - [3) Kubernetes 클러스터 배포 (`deploy`)](#3-kubernetes-클러스터-배포-deploy)
-7. [🏗️ 아키텍처 (Architecture)](#️-아키텍처-architecture)
-8. [🔐 기본 제공 엔터프라이즈 기능 (Enterprise Features)](#-기본-제공-엔터프라이즈-기능-enterprise-features)
-9. [🐳 로컬 인프라 및 Docker Compose 가이드 (Local Infrastructure & Profiles)](#-로컬-인프라-및-docker-compose-가이드-local-infrastructure--profiles)
-   - [1. 서비스 스택 및 프로파일 구성](#1-서비스-스택-및-프로파일-구성-compose-profiles)
-   - [2. 프로파일별 실행 명령어](#2-프로파일별-실행-및-관리-명령어)
-   - [3. 주요 대시보드 엔드포인트 및 기본 계정](#3-주요-서비스-웹-대시보드-및-엔드포인트-url)
-   - [4. 원클릭 런처 자동 연동](#4-로컬-원클릭-런처-자동-연동-runsh--runbat)
-10. [📁 생성되는 프로젝트 구조 (User Project Layout)](#-생성되는-프로젝트-구조-user-project-layout)
+8. [🏗️ 아키텍처 (Architecture)](#️-아키텍처-architecture)
+9. [🔐 기본 제공 엔터프라이즈 기능 (Enterprise Features)](#-기본-제공-엔터프라이즈-기능-enterprise-features)
+10. [🐳 로컬 인프라 및 Docker Compose 가이드 (Local Infrastructure & Profiles)](#-로컬-인프라-및-docker-compose-가이드-local-infrastructure--profiles)
+    - [1. 서비스 스택 및 프로파일 구성](#1-서비스-스택-및-프로파일-구성-compose-profiles)
+    - [2. 프로파일별 실행 명령어](#2-프로파일별-실행-및-관리-명령어)
+    - [3. 주요 대시보드 엔드포인트 및 기본 계정](#3-주요-서비스-웹-대시보드-및-엔드포인트-url)
+    - [4. 원클릭 런처 자동 연동](#4-로컬-원클릭-런처-자동-연동-runsh--runbat)
+11. [📁 생성되는 프로젝트 구조 (User Project Layout)](#-생성되는-프로젝트-구조-user-project-layout)
     - [🏛️ AgentForge 프레임워크 자체 저장소 구조](#️-agentforge-프레임워크-자체-저장소-구조-내부-엔진)
-11. [📦 사용 Python 패키지 및 버전 정보 (Dependencies)](#-사용-python-패키지-및-버전-정보-dependencies)
-12. [🛠️ 개발 및 기여 가이드 (Contributing)](#️-개발-및-기여-가이드-contributing)
-13. [📄 라이선스 (License)](#-라이선스-license)
+12. [📦 사용 Python 패키지 및 버전 정보 (Dependencies)](#-사용-python-패키지-및-버전-정보-dependencies)
+13. [🛠️ 개발 및 기여 가이드 (Contributing)](#️-개발-및-기여-가이드-contributing)
+14. [📄 라이선스 (License)](#-라이선스-license)
 
 ---
 
@@ -147,6 +154,96 @@ flowchart LR
 - **아이콘 체계**: 단일 아이콘 패밀리 원칙 ([`lucide-react`](https://lucide.dev/))
 - **AI 인터랙션 패턴**: 실시간 SSE 스트리밍 버블, HITL 승인 카드(`InterruptApprovalCard`), 코드 구문 강조(`MarkdownContent`), 다크 콘솔 드로어(`TerminalConsole`)
 - **품질 제약 (Do's & Don'ts)**: 임의의 hex 컬러(`bg-[#...]`) 및 인라인 `style={{}}` 방지, 접근성 시맨틱 태그 준수
+
+---
+
+## 🛠️ AI 개발 하네스 (Developer Harness Skills: `.agents/skills`)
+
+AgentForge로 생성된 모든 프로젝트에는 AI 코딩 에이전트(Google Antigravity, Claude Code, Cursor, Windsurf 등)와 협업할 때 발생하는 **환각 코딩, 아키텍처 파괴, 과도한 재작성, 테스트 없는 수정**을 원천 차단하기 위해 **`.agents/skills/` 기반의 표준 개발 하네스**가 기본 탑재되어 있습니다.
+
+---
+
+### 1. 왜 개발 하네스인가요? (통제되지 않는 AI 코딩 방지)
+AI 코딩 에이전트에게 단순 프롬프트만 주면 무계획적인 코드 수정, 기존 계층 침범, 무의미한 디자인 패턴 남용(Over-Engineering)이 발생하기 쉽습니다.  
+AgentForge 개발 하네스는 **엄격한 8단계 엔지니어링 파이프라인**을 통해 AI의 행동을 완전히 규격화합니다:
+
+- ❌ **통제되지 않는 코딩**: "버그 고쳐줘" → 에이전트가 파일 수십 개를 임의 수정 → 기존 기능 파손 & 회귀 버그 발생
+- ✅ **AgentForge 하네스**: 결함 원인 분석(RCA) → **재현 실패 테스트(RED) 필수 선작성** → 파일 단위 최소 수정 설계 → **★사용자 승인 게이트** → GitHub Issue/태그 등록 → 정밀 구현 → 코드 리뷰 → 전체 회귀 테스트 통과 증명 → 이슈 종료
+
+---
+
+### 2. 3개 특화 개발 하네스 스킬
+
+| 스킬명 (Directory) | 적용 작업 유형 | 핵심 차별화 엔지니어링 규칙 | 진입 파일 |
+| :--- | :--- | :--- | :--- |
+| **`feature-development`** | **신규 기능 개발** | Clean Architecture 계층 분리, 파일 단위 `[NEW]`/`[MODIFY]` 구체적 설계, 신규 단위/E2E 테스트 케이스 필수 작성 | [`.agents/skills/feature-development/SKILL.md`](.agents/skills/feature-development/SKILL.md) |
+| **`feature-enhancement`** | **기능 개선 / 리팩토링** | 파급 영향도(Blast Radius) 분석, 하위 호환성(Breaking Changes) 점검, 과도한 재작성(Over-refactoring) 방지 | [`.agents/skills/feature-enhancement/SKILL.md`](.agents/skills/feature-enhancement/SKILL.md) |
+| **`bugfix`** | **버그 / 장애 수정** | 근본 원인(RCA) 분석, **재현 실패 테스트(Reproducing Test) 선작성 필수**, 최소 수정 원칙(Minimal Diff) 엄수 | [`.agents/skills/bugfix/SKILL.md`](.agents/skills/bugfix/SKILL.md) |
+
+> 📚 **공통 워크플로우 명세서**: [`.agents/skills/shared/workflow-spec.md`](.agents/skills/shared/workflow-spec.md)에 GitHub CLI 명령어, 태그 상태 전이 규칙, 로컬 폴백 상세가 정의되어 있습니다.
+
+---
+
+### 3. 8단계 표준 워크플로우 파이프라인
+
+모든 스킬은 다음 8단계 파이프라인을 엄격히 준수하여 순차적으로 진행됩니다:
+
+```mermaid
+flowchart TD
+    A[1. 분석 Analysis] --> B[2. 파일 단위 상세 설계 Design]
+    B --> C[3. 설계 리뷰 Over-Engineering Review]
+    C --> D{★ 사용자 승인 게이트 User Gate}
+    D -- 승인 Approved --> E[4. GitHub Issue 및 상태 태그 등록 Issue Registration]
+    D -- 수정 요청 Changes Requested --> B
+    E --> F[5. Issue 기반 코드 구현 Implementation]
+    F --> G[6. 코드 리뷰 Code Review]
+    G --> H[7. 기능 점검 QA / Verification]
+    H --> I[8. 결과 보고 및 Issue 완료 Close]
+```
+
+1. **[1단계] 분석 (Analysis)**: 요구사항 분해, 기존 아키텍처 경계 및 영향도 사전 도출
+2. **[2단계] 파일 단위 상세 설계 (Design)**: 모호한 구상이 아닌 `[NEW]`, `[MODIFY]`, `[DELETE]` 단위로 정확한 변경 대상 및 함수/클래스 시그니처 명시
+3. **[3단계] 설계 리뷰 (Over-engineering Review)**: YAGNI(불필요한 미래 대비 코드 금지), 과도한 추상화/패턴 남용, 불필요한 레이어 분리를 스스로 비판적으로 점검
+4. **[★ 사용자 승인 게이트 (Human-in-the-loop)]**: 에이전트의 임의 구현을 방지하기 위해, 정제된 설계서와 오버엔지니어링 검토 결과를 사용자에게 보고하고 **명시적 승인(`Proceed` 또는 확인)**을 획득
+5. **[4단계] GitHub Issue & 태그 등록**: GitHub CLI(`gh`)로 공식 Issue를 등록하고 라벨 부착 (미인증 환경에서는 `.github/issues/` 마크다운으로 자동 폴백)
+6. **[5단계] Issue 기반 구현**: 승인된 파일 단위 설계서 범위를 벗어나지 않고 정밀하게 코드 작성
+7. **[6단계] 코드 리뷰**: `git diff`를 통한 노이즈/보안 취약점/불변식(Invariants) 점검 및 이슈 댓글 기록
+8. **[7단계] 기능 점검 (QA & Testing)**: 자동화 테스트(`pytest`, 프론트엔드 빌드/린트) + 신규/회귀 테스트 작성 및 통과 증명 + 수동 검증 체크리스트
+9. **[8단계] 결과 보고 및 완료**: GitHub Issue 태그를 `stage:done`, `status:completed`로 전환하고 요약과 함께 이슈 Close
+
+---
+
+### 4. GitHub Issue & 단계별·상태별 태그(Label) 체계
+
+작업 흐름을 GitHub Issue 트래커에서 실시간으로 투명하게 추적할 수 있도록 체계적인 태그 시스템을 운영합니다:
+
+| 카테고리 | 태그 (Label) | 설명 | 전이 (Transition) 규칙 |
+| :--- | :--- | :--- | :--- |
+| **작업 유형 (Type)** | `type:feature` / `type:enhancement` / `type:bugfix` | 작업의 성격 정의 | 생성 시 1회 부여 |
+| **진행 단계 (Stage)** | `stage:analysis` → `stage:design` → `stage:design-review` → `stage:implementation` → `stage:code-review` → `stage:qa-testing` → `stage:done` | 현재 워크플로우 위치 | **단일 유지**: 다음 단계 진입 시 이전 단계 태그를 자동 제거하고 새 단계 태그로 교체 |
+| **작업 상태 (Status)** | `status:in-progress` / `status:blocked` / `status:completed` | 진행 상태 | 대기/차단 시 `status:blocked`, 성공 종료 시 `status:completed` |
+
+> 💡 **GitHub CLI 미연동 시 자동 폴백**: `gh`가 없거나 로그인되지 않은 환경에서는 자동으로 프로젝트 내 `.github/issues/ISSUE-<날짜>-<작업명>.md` 로컬 파일로 저장하여 형상 관리를 유지합니다.
+
+---
+
+### 5. AI 에이전트 도구별 실전 활용 가이드
+
+프로젝트 디렉토리 내에서 AI 어시스턴트와 대화할 때 해당 스킬을 간단히 호출하여 즉시 규격화된 개발을 수행할 수 있습니다.
+
+#### 💬 실전 프롬프트 호출 예시
+
+- **신규 기능 추가 시**:
+  > *"`.agents/skills/feature-development/SKILL.md` 하네스를 따라 사용자가 대화 세션을 내보낼 수 있는 '대화 내보내기(Export Chat)' 기능을 추가해줘."*
+
+- **기존 모듈 개선/리팩토링 시**:
+  > *"`.agents/skills/feature-enhancement/SKILL.md` 하네스를 준수하여 Redis 세션 스토리지의 TTL 자동 갱신 로직을 개선해줘. 하위 호환성을 유지하고 과도한 재작성을 방지해줘."*
+
+- **버그/장애 해결 시**:
+  > *"`.agents/skills/bugfix/SKILL.md` 하네스를 따라 토큰 스트리밍 도중 클라이언트 연결이 끊겼을 때 발생하는 500 에러를 해결해줘. 먼저 실패하는 재현 테스트를 작성해줘."*
+
+- **Google Antigravity 사용 시**:
+  > 프로젝트 열람 시 자동으로 `feature-development`, `feature-enhancement`, `bugfix` 스킬이 로드되므로, 별도 경로 지정 없이 "신규 기능 개발 하네스로 시작해줘"라고만 입력해도 자동 활성화됩니다.
 
 ---
 
@@ -599,6 +696,11 @@ AgentForge로 생성된 백엔드 애플리케이션은 최초 기동 시 데이
 
 ```text
 my-awesome-agent/
+├── .agents/skills/                # 🤖 기본 탑재 AI 개발 하네스 (Antigravity/Agent 표준)
+│   ├── feature-development/       # 신규 기능 개발 하네스 (SKILL.md)
+│   ├── feature-enhancement/       # 기존 기능 개선/리팩토링 하네스 (SKILL.md)
+│   ├── bugfix/                    # RCA & 재현 실패 테스트 주도 버그 수정 하네스 (SKILL.md)
+│   └── shared/                    # 8단계 워크플로우 명세 및 GitHub 라벨 규약 (workflow-spec.md)
 ├── .gitignore                     # Git 제외 설정 (backend/.env, frontend/.env 제외, *.env.sample 커밋)
 ├── run.sh                         # macOS/Linux 원클릭 의존성 설치 & 서버 동시 실행 (.env 자동 초기화)
 ├── run.bat                        # Windows 원클릭 의존성 설치 & 서버 동시 실행 (.env 자동 초기화)
@@ -668,6 +770,11 @@ AgentForge 프레임워크 자체의 코드베이스는 표준 Python 패키지 
 
 ```text
 AgentForge/
+├── .agents/skills/                # 🤖 자체 개발 하네스 (feature, enhancement, bugfix, shared)
+│   ├── feature-development/
+│   ├── feature-enhancement/
+│   ├── bugfix/
+│   └── shared/
 ├── agentforge/                    # 핵심 Python 패키지 (CLI & 생성기 엔진)
 │   ├── cli/                       # CLI 도구 구현체 (Typer 기반)
 │   │   ├── commands/              # 세부 하위 명령어
@@ -690,7 +797,8 @@ AgentForge/
 │   │   └── streaming.py           # 실시간 SSE 스트리머 & 동시성 세마포어
 │   │
 │   └── templates/                 # 모듈 조합형 프로젝트 템플릿 저장소
-│       ├── root/                  # 프로젝트 루트 템플릿 (.gitignore 등)
+│       ├── root/                  # 프로젝트 루트 템플릿 (.gitignore, .agents/skills/ 등)
+│       │   └── .agents/skills/    # 생성 프로젝트로 복사될 개발 하네스 템플릿 원본
 │       ├── backend/               # FastAPI 백엔드 (Clean Architecture)
 │       ├── frontend/              # 프론트엔드 모듈 템플릿 (React Vite SPA, DESIGN.md, README.md)
 │       ├── scripts/               # 원클릭 개발/설치 스크립트 (run.sh, run.bat 등)

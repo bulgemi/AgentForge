@@ -245,6 +245,33 @@ def test_scaffolding_engine_full_generation():
         root_readme_content = (project_dir / "README.md").read_text(encoding="utf-8")
         assert "Frontend UI/UX Design System & AI Coding Agent Guidelines" in root_readme_content
         assert "frontend/DESIGN.md" in root_readme_content
+        assert "AI Developer Harness & Workflow Skills" in root_readme_content
+        assert ".agents/skills" in root_readme_content
+
+        # AI Developer Harness Skills (.agents/skills) checks
+        skills_dir = project_dir / ".agents" / "skills"
+        assert skills_dir.exists()
+        assert (skills_dir / "feature-development" / "SKILL.md").exists()
+        assert (skills_dir / "feature-enhancement" / "SKILL.md").exists()
+        assert (skills_dir / "bugfix" / "SKILL.md").exists()
+        assert (skills_dir / "shared" / "workflow-spec.md").exists()
+
+        feat_skill_text = (skills_dir / "feature-development" / "SKILL.md").read_text(encoding="utf-8")
+        assert "name: feature-development" in feat_skill_text
+        assert "사용자 승인 게이트" in feat_skill_text
+        assert "오버엔지니어링 검토" in feat_skill_text
+
+        enh_skill_text = (skills_dir / "feature-enhancement" / "SKILL.md").read_text(encoding="utf-8")
+        assert "name: feature-enhancement" in enh_skill_text
+        assert "Over-refactoring" in enh_skill_text
+
+        bug_skill_text = (skills_dir / "bugfix" / "SKILL.md").read_text(encoding="utf-8")
+        assert "name: bugfix" in bug_skill_text
+        assert "재현 실패 테스트" in bug_skill_text
+
+        spec_text = (skills_dir / "shared" / "workflow-spec.md").read_text(encoding="utf-8")
+        assert "type:feature" in spec_text
+        assert "stage:implementation" in spec_text
 
         # Kubernetes checks
         k8s_dir = project_dir / "k8s"
@@ -751,4 +778,46 @@ def test_backend_dependencies_and_app_initialization():
         )
         assert result.returncode == 0, f"App import failed: STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
         assert "OK" in result.stdout
+
+
+def test_scaffolding_engine_copies_agent_skills():
+    """Verify scaffolding engine installs all AI developer harness skills and shared spec."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="skills-test-bot",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="react",
+        )
+
+        skills_dir = project_dir / ".agents" / "skills"
+        assert skills_dir.is_dir()
+
+        # Check required skill folders and files
+        required_skills = ["feature-development", "feature-enhancement", "bugfix"]
+        for skill_name in required_skills:
+            skill_file = skills_dir / skill_name / "SKILL.md"
+            assert skill_file.is_file(), f"{skill_file} should exist"
+            content = skill_file.read_text(encoding="utf-8")
+            assert f"name: {skill_name}" in content
+            assert "description:" in content
+            assert "1단계:" in content
+            assert "8단계:" in content
+            assert "사용자 승인 게이트" in content
+            assert "gh issue" in content
+
+        # Check shared workflow spec
+        spec_file = skills_dir / "shared" / "workflow-spec.md"
+        assert spec_file.is_file()
+        spec_content = spec_file.read_text(encoding="utf-8")
+        assert "type:feature" in spec_content
+        assert "type:enhancement" in spec_content
+        assert "type:bugfix" in spec_content
+        assert "stage:implementation" in spec_content
+        assert "stage:done" in spec_content
+        assert "status:completed" in spec_content
+        assert "gh auth status" in spec_content
+        assert ".github/issues/" in spec_content
+
 
