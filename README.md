@@ -113,7 +113,7 @@ AgentForge로 생성된 프로젝트는 추가 프론트엔드 작업 없이 즉
 
 ### 🎨 스펙 기반 UI 개발 & AI Coding Agent 협업 체계 (`frontend/DESIGN.md`)
 
-AgentForge는 **"프로젝트 고유의 요구사항에 맞추어 UI 명세를 정의하고, 이를 바탕으로 AI 코딩 에이전트가 오차 없이 맞춤형 UI를 개발하도록 지원"**하는 **스펙 기반 UI 개발(Spec-Driven UI Development)** 방법론을 기본 제공합니다.
+AgentForge는 "**프로젝트 고유의 요구사항에 맞추어 UI 명세를 정의하고, 이를 바탕으로 AI 코딩 에이전트가 오차 없이 맞춤형 UI를 개발하도록 지원**"하는 **스펙 기반 UI 개발(Spec-Driven UI Development)** 방법론을 기본 제공합니다.
 
 프로젝트를 생성하면 프론트엔드 루트 디렉토리에 표준 설계 명세서인 [**`frontend/DESIGN.md`**](agentforge/templates/frontend/react-vite/DESIGN.md) 템플릿이 자동으로 배치됩니다.  
 개발자는 자신의 프로젝트 요건(도메인 특성, 브랜드 테마, 화면 레이아웃, 커스텀 컴포넌트)에 맞게 `DESIGN.md`를 작성하고, **Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity** 등 AI 코딩 에이전트에게 이 문서를 기준으로 개발을 지시함으로써 **스타일 파편화나 환각 없이 프로젝트 요구사항에 정확히 부합하는 일관된 UI/UX를 신속하게 구현**할 수 있습니다.
