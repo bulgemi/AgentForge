@@ -207,17 +207,17 @@ class ScaffoldingEngine:
         dest_backend_src = dest_root / "backend" / "src"
         copy_core_engine(dest_backend_src, overwrite=True)
 
-        # 6. Generate project README.md and root files
-        gitignore_tpl = self.templates_dir / "root" / ".gitignore"
-        dest_gitignore = dest_root / ".gitignore"
-        if gitignore_tpl.exists() and not dest_gitignore.exists():
-            gi_content = gitignore_tpl.read_text(encoding="utf-8")
-            dest_gitignore.write_text(self.render_content(gi_content, context), encoding="utf-8")
-
-        # 6.0 Copy Agent Developer Harness Skills (.agents/skills)
-        agents_tpl = self.templates_dir / "root" / ".agents"
-        if agents_tpl.exists():
-            self.copy_template_tree(agents_tpl, dest_root / ".agents", context)
+        # 6. Copy Root configuration files (.gitignore, AGENTS.md, CLAUDE.md, .cursorrules) and .agents
+        root_tpl = self.templates_dir / "root"
+        if root_tpl.exists():
+            for item in root_tpl.iterdir():
+                if item.is_file():
+                    dest_file = dest_root / item.name
+                    if not dest_file.exists():
+                        content = item.read_text(encoding="utf-8")
+                        dest_file.write_text(self.render_content(content, context), encoding="utf-8")
+                elif item.is_dir() and item.name == ".agents":
+                    self.copy_template_tree(item, dest_root / ".agents", context)
 
         # 6.1 Generate VS Code Launch and Settings configurations (.vscode/launch.json, settings.json)
         self._generate_vscode_configs(dest_root, clean_frontend)
