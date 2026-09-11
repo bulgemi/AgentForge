@@ -226,6 +226,26 @@ def test_scaffolding_engine_full_generation():
         assert (frontend_dir / "src" / "components" / "chat" / "ChatAssistant.jsx").exists()
         assert (frontend_dir / "src" / "components" / "settings" / "AccountManagementPanel.jsx").exists()
 
+        # Frontend DESIGN.md and README.md checks
+        design_md = frontend_dir / "DESIGN.md"
+        fe_readme = frontend_dir / "README.md"
+        assert design_md.exists()
+        assert fe_readme.exists()
+
+        design_content = design_md.read_text(encoding="utf-8")
+        assert "# demo-agent Frontend Design System & AI Agent Guidelines" in design_content
+        assert "skred" in design_content
+        assert "lucide-react" in design_content
+        assert "Strict Rules & Constraints for AI Coding Agents" in design_content
+
+        fe_readme_content = fe_readme.read_text(encoding="utf-8")
+        assert "# demo-agent - Frontend" in fe_readme_content
+        assert "DESIGN.md" in fe_readme_content
+
+        root_readme_content = (project_dir / "README.md").read_text(encoding="utf-8")
+        assert "Frontend UI/UX Design System & AI Coding Agent Guidelines" in root_readme_content
+        assert "frontend/DESIGN.md" in root_readme_content
+
         # Kubernetes checks
         k8s_dir = project_dir / "k8s"
         assert (k8s_dir / "k8s-deploy.sh").exists()
