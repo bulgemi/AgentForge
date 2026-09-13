@@ -40,7 +40,7 @@ cd my-agent && ./run.sh        # Windows: run.bat
 | :--- | :--- | :--- | :--- |
 | **의존성 (Dependency)** | 중앙 코어를 import하는 종속형 | **Core 엔진 100% 독립 복사 (Standalone)** | 외부 패키지 설치 없이 독립 레포로 버전 관리 및 배포 가능 |
 | **에이전트 유연성** | 특정 라이브러리 1종 고정 | **5대 프레임워크 표준 어댑터 패턴 내장** | LangChain, LangGraph, DeepAgent, ADK, Bedrock 자유 선택 |
-| **AI 협업 통제** | AI의 임의 파일 수정 및 회귀 버그 | **`.agents/skills/` 8단계 표준 개발 하네스** | 분석 → 파일단위 설계 → 오버엔지니어링 검토 → 승인 게이트 → 구현 |
+| **AI 협업 통제 & 코드 이해** | AI의 임의 파일 수정 및 복잡한 코드 파악 곤란 | **`.agents/skills/` 8단계 하네스 & `code-tutor`** | 분석 → 설계 → 승인 게이트 → 구현 및 2단계 Mermaid+ELI15 도식화 |
 | **UI/UX 일관성** | 개발자마다 제각각인 스타일링 | **Spec-Driven UI (`frontend/DESIGN.md`)** | 디자인 토큰과 제약 규칙을 AI의 Single Source of Truth로 연동 |
 | **인프라 부하** | 모든 무거운 컨테이너 강제 기동 | **Docker Compose 6개 프로파일 선택 구동** | 불필요한 리소스 낭비 없이 필요한 스택(`infra`, `search` 등)만 실행 |
 
@@ -55,7 +55,7 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 | [**⚡ 3분 사용자 퀵스타트**](docs/quickstart.md) | 프로젝트 생성부터 로그인, 대화 화면 및 관리자 콘솔 UI 둘러보기 | AgentForge를 처음 시작하는 모든 사용자 |
 | [**⚙️ CLI & 스캐폴딩 완전 가이드**](docs/cli.md) | `af new`, `dev`, `build`, `deploy` 옵션, Python API, 5단계 합성 엔진 | CLI 파라미터 및 자동화 파이프라인 구축자 |
 | [**🏗️ 아키텍처 & 프레임워크 가이드**](docs/architecture.md) | Clean Architecture 모노레포, 에이전트 5종 어댑터, Spec-Driven UI, 엔터프라이즈 기능 | 백엔드/프론트엔드 아키텍처를 깊이 이해하려는 개발자 |
-| [**🛠️ AI 개발 하네스 (Skills) 가이드**](docs/skills.md) | `feature-development`, `feature-enhancement`, `bugfix`, 8단계 파이프라인, GitHub Issue/태그 | AI 코딩 도구(Cursor, Claude Code, Antigravity) 사용자 |
+| [**🛠️ AI 개발 하네스 (Skills) 가이드**](docs/skills.md) | `feature-development`, `feature-enhancement`, `bugfix`, `code-tutor`, 8단계 파이프라인 | AI 코딩 도구(Cursor, Claude Code, Antigravity) 사용자 |
 | [**🐳 로컬 인프라 & 배포 가이드**](docs/infrastructure.md) | Docker Compose 6개 프로파일, 서비스 스택, 대시보드 URL, K8s 클러스터 배포 | 로컬 인프라 제어 및 클라우드 배포 운영자 |
 | [**🌱 환경 변수 & 거버넌스 가이드**](docs/env-vars.md) | 백엔드/프론트엔드 `.env` & `.env.sample` 전체 레퍼런스 및 보안 수칙 | 보안 설정 및 환경 변수 연동 엔지니어 |
 
@@ -71,9 +71,10 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 - `frontend/DESIGN.md`에 브랜드 색상, 8pt 그리드 여백, 시맨틱 토큰, 품질 제약(Do's & Don'ts)을 명시합니다.
 - AI 코딩 어시스턴트(Cursor, Claude Code, Windsurf)가 `DESIGN.md`를 단일 진실 공급원(SSOT)으로 삼아 완벽한 UI 일관성을 유지합니다.
 
-### 3. 🛠️ `.agents/skills/` 8단계 표준 AI 개발 하네스
-- **3개 특화 스킬**: `신규 기능(feature-development)`, `기능 개선(feature-enhancement)`, `버그 수정(bugfix)`
+### 3. 🛠️ `.agents/skills/` 표준 AI 개발 하네스 & 코드 튜터
+- **4대 특화 스킬**: `신규 기능(feature-development)`, `기능 개선(feature-enhancement)`, `버그 수정(bugfix)`, `코드/아키텍처 튜터(code-tutor)`
 - **8단계 파이프라인**: `분석` → `파일 단위 설계([NEW]/[MODIFY])` → `오버엔지니어링 검토` → `★사용자 승인 게이트` → `GitHub Issue/태그 등록` → `구현` → `코드 리뷰` → `기능 점검(신규/회귀 테스트)` → `이슈 종료`
+- **code-tutor**: 개발자/아키텍트를 위한 2단계 하이브리드 Mermaid 도식화(컴포넌트 구조도 + 런타임 시퀀스) 및 ELI15 Q&A 탐구형 스토리텔링 해설 제공
 
 ### 4. 🐳 멀티 프로파일 로컬 인프라 & K8s 배포
 - **PostgreSQL 16** + **Redis 7.4** + **Langfuse v3** (ClickHouse + MinIO) + **OpenSearch 2.19.3**
@@ -92,7 +93,7 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 
 ```text
 my-awesome-agent/
-├── .agents/skills/                # 🤖 기본 탑재 AI 개발 하네스 (feature, enhancement, bugfix)
+├── .agents/skills/                # 🤖 기본 탑재 AI 개발 하네스 & 튜터 (feature, enhancement, bugfix, code-tutor)
 ├── run.sh / run.bat               # 원클릭 인프라 & 개발 서버 동시 실행 스크립트
 ├── backend/                       # FastAPI 백엔드 (Clean Architecture: domain, application, infra)
 │   ├── src/core/                  # 100% 독립 복사된 Core 엔진 (adapter, streaming, database, config)

@@ -14,6 +14,7 @@ Whenever the user gives a natural language task, analyze their intent and **auto
 | **신규 기능 / 컴포넌트 / API 추가**<br/>(e.g., "대화 내보내기 추가해줘", "Add user export API") | [`.agents/skills/feature-development/SKILL.md`](.agents/skills/feature-development/SKILL.md) | • Clean Architecture 계층 분리<br/>• `[NEW]`, `[MODIFY]`, `[DELETE]` 파일 단위 설계<br/>• 신규 단위/E2E 테스트 케이스 필수 작성 |
 | **기존 기능 개선 / 리팩토링 / 최적화**<br/>(e.g., "세션 TTL 갱신 로직 개선해줘", "Optimize query") | [`.agents/skills/feature-enhancement/SKILL.md`](.agents/skills/feature-enhancement/SKILL.md) | • 파급 영향도(Blast Radius) 분석<br/>• 하위 호환성(Breaking Changes) 보장<br/>• 과도한 재작성(Over-refactoring) 방지 |
 | **버그 수정 / 결함 해결 / 에러 분석**<br/>(e.g., "스트리밍 500 에러 고쳐줘", "Fix connection reset") | [`.agents/skills/bugfix/SKILL.md`](.agents/skills/bugfix/SKILL.md) | • 근본 원인(RCA) 규명<br/>• **재현 실패 테스트(RED) 필수 선작성**<br/>• 최소 수정 원칙(Minimal Diff) 엄수 |
+| **코드 / 기능 / 아키텍처 설명 및 도식화**<br/>(e.g., "이 기능 어떻게 구현돼 있어?", "아키텍처 다이어그램 그려줘", "코드 설명해줘") | [`.agents/skills/code-tutor/SKILL.md`](.agents/skills/code-tutor/SKILL.md) | • 2단계 하이브리드 Mermaid 도식화(컴포넌트+시퀀스)<br/>• ELI15 Q&A 탐구형 스토리텔링 해설<br/>• 실제 코드 파일/라인 링크 제공 |
 
 ---
 

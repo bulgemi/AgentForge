@@ -255,6 +255,7 @@ def test_scaffolding_engine_full_generation():
         assert (skills_dir / "feature-development" / "SKILL.md").exists()
         assert (skills_dir / "feature-enhancement" / "SKILL.md").exists()
         assert (skills_dir / "bugfix" / "SKILL.md").exists()
+        assert (skills_dir / "code-tutor" / "SKILL.md").exists()
         assert (skills_dir / "shared" / "workflow-spec.md").exists()
 
         feat_skill_text = (skills_dir / "feature-development" / "SKILL.md").read_text(encoding="utf-8")
@@ -834,6 +835,7 @@ def test_scaffolding_engine_copies_agent_skills():
         assert "feature-development" in agents_text
         assert "feature-enhancement" in agents_text
         assert "bugfix" in agents_text
+        assert "code-tutor" in agents_text
 
         claude_text = claude_md.read_text(encoding="utf-8")
         assert "AgentForge AI Developer Harness" in claude_text

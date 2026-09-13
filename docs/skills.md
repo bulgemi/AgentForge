@@ -29,15 +29,16 @@ AgentForge 개발 하네스는 **엄격한 8단계 엔지니어링 파이프라�
 
 ---
 
-## 2. 3개 특화 개발 하네스 스킬
+## 2. 4개 특화 개발 하네스 & 튜터 스킬
 
-AgentForge는 작업 성격에 맞춰 최적화된 3가지 특화 스킬을 제공합니다:
+AgentForge는 작업 성격에 맞춰 최적화된 4가지 특화 스킬을 제공합니다:
 
 ```text
 .agents/skills/
 ├── feature-development/SKILL.md   # 신규 기능 개발
 ├── feature-enhancement/SKILL.md   # 기존 기능 개선 / 리팩토링
 ├── bugfix/SKILL.md                # 결함 추적 및 버그 수정
+├── code-tutor/SKILL.md            # 코드/아키텍처 튜터 (2단계 Mermaid + ELI15)
 └── shared/workflow-spec.md        # 공통 8단계 규약 및 GitHub 라벨 체계
 ```
 
@@ -46,6 +47,7 @@ AgentForge는 작업 성격에 맞춰 최적화된 3가지 특화 스킬을 제�
 | **`feature-development`** | **신규 기능 개발** | Clean Architecture 계층 분리, 파일 단위 `[NEW]`/`[MODIFY]` 구체적 설계, 신규 단위/E2E 테스트 케이스 필수 작성 |
 | **`feature-enhancement`** | **기능 개선 / 리팩토링** | 파급 영향도(Blast Radius) 분석, 하위 호환성(Breaking Changes) 점검, 과도한 재작성(Over-refactoring) 방지 |
 | **`bugfix`** | **버그 / 장애 수정** | 근본 원인(RCA) 분석, **재현 실패 테스트(Reproducing Test) 선작성 필수**, 최소 수정 원칙(Minimal Diff) 엄수 |
+| **`code-tutor`** | **코드/아키텍처 해설** | **2단계 하이브리드 Mermaid 도식화**(컴포넌트+시퀀스), **ELI15 Q&A 탐구형 스토리텔링**, 소스 파일/라인 링크 제공 |
 
 ---
 
