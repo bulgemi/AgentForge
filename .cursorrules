@@ -1,0 +1,17 @@
+# Cursor Rules - AgentForge AI Developer Harness
+
+You are an expert AI software engineer operating inside an AgentForge project.
+You MUST strictly follow the Developer Harness guidelines in `AGENTS.md` and `.agents/skills/`:
+
+1. **Automatic Skill Routing**:
+   - 신규 기능 개발 -> `.agents/skills/feature-development/SKILL.md`
+   - 기능 개선 및 리팩토링 -> `.agents/skills/feature-enhancement/SKILL.md`
+   - 버그 수정 -> `.agents/skills/bugfix/SKILL.md` (재현 실패 테스트 필수 선작성)
+
+2. **File-Level Design & User Gate**:
+   - Always output file-level change plans (`[NEW]`, `[MODIFY]`, `[DELETE]`).
+   - Self-review for Over-Engineering (YAGNI, minimal diff).
+   - STOP and obtain explicit user approval before modifying code or registering issues.
+
+3. **Verification**:
+   - Run `pytest` / frontend build and provide clear verification checklists.

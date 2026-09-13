@@ -207,12 +207,17 @@ class ScaffoldingEngine:
         dest_backend_src = dest_root / "backend" / "src"
         copy_core_engine(dest_backend_src, overwrite=True)
 
-        # 6. Generate project README.md and root files
-        gitignore_tpl = self.templates_dir / "root" / ".gitignore"
-        dest_gitignore = dest_root / ".gitignore"
-        if gitignore_tpl.exists() and not dest_gitignore.exists():
-            gi_content = gitignore_tpl.read_text(encoding="utf-8")
-            dest_gitignore.write_text(self.render_content(gi_content, context), encoding="utf-8")
+        # 6. Copy Root configuration files (.gitignore, AGENTS.md, CLAUDE.md, .cursorrules) and .agents
+        root_tpl = self.templates_dir / "root"
+        if root_tpl.exists():
+            for item in root_tpl.iterdir():
+                if item.is_file():
+                    dest_file = dest_root / item.name
+                    if not dest_file.exists():
+                        content = item.read_text(encoding="utf-8")
+                        dest_file.write_text(self.render_content(content, context), encoding="utf-8")
+                elif item.is_dir() and item.name == ".agents":
+                    self.copy_template_tree(item, dest_root / ".agents", context)
 
         # 6.1 Generate VS Code Launch and Settings configurations (.vscode/launch.json, settings.json)
         self._generate_vscode_configs(dest_root, clean_frontend)
@@ -297,6 +302,21 @@ cd ../frontend
 npm install
 npm run dev
 ```
+
+### 7. Frontend UI/UX Design System & AI Coding Agent Guidelines
+AgentForge adopts a **Spec-Driven UI Development** methodology:
+- Edit [`frontend/DESIGN.md`](frontend/DESIGN.md) to define your project's unique domain requirements, branding, and UI specifications.
+- When pairing with AI Coding Agents (Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity), point the agent to [`frontend/DESIGN.md`](frontend/DESIGN.md) as the Single Source of Truth for generating and maintaining consistent, spec-compliant UI components.
+- Refer to [`frontend/README.md`](frontend/README.md) for frontend architecture and prompt instructions.
+
+### 8. AI Developer Harness & Workflow Skills (`.agents/skills`)
+This project comes pre-configured with standardized AI Developer Harness Skills to streamline feature delivery, enhancements, and bugfixes:
+- **`feature-development`** (`.agents/skills/feature-development/SKILL.md`): End-to-end new feature development harness.
+- **`feature-enhancement`** (`.agents/skills/feature-enhancement/SKILL.md`): Safe feature enhancement, refactoring, and impact analysis harness.
+- **`bugfix`** (`.agents/skills/bugfix/SKILL.md`): RCA, reproducing failing test-driven bugfix harness.
+- **Standard 8-Stage Pipeline**:
+  `분석` → `파일 단위 상세 설계` → `설계 리뷰(오버엔지니어링 검토)` → `★사용자 승인 게이트` → `GitHub Issue 등록(단계/상태 태그)` → `Issue 기반 구현` → `코드 리뷰` → `기능 점검(신규/회귀 테스트)` → `결과 보고 및 Issue 종료`
+- See [`.agents/skills/shared/workflow-spec.md`](.agents/skills/shared/workflow-spec.md) for GitHub CLI (`gh`) commands, label schema (`type:*`, `stage:*`, `status:*`), and local markdown fallback rules.
 """
             readme_path.write_text(readme_content, encoding="utf-8")
 
