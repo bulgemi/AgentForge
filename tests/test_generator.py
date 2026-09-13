@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -843,3 +844,44 @@ def test_scaffolding_engine_copies_agent_skills():
         assert ".agents/skills/" in cursor_text
 
 
+def test_scaffolding_generates_load_test():
+    """Verify that backend/load_test/ files are scaffolded with correct permissions and configs."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        engine = ScaffoldingEngine()
+        project_dir = engine.generate(
+            project_name="loadtest-demo",
+            target_dir=tmpdir,
+            framework="langgraph",
+            frontend="react",
+        )
+
+        load_test_dir = project_dir / "backend" / "load_test"
+        assert load_test_dir.is_dir()
+
+        locustfile = load_test_dir / "locustfile.py"
+        questions_file = load_test_dir / "questions.json"
+        run_sh = load_test_dir / "run.sh"
+        run_bat = load_test_dir / "run.bat"
+        readme = load_test_dir / "README.md"
+
+        assert locustfile.is_file()
+        assert questions_file.is_file()
+        assert run_sh.is_file()
+        assert run_bat.is_file()
+        assert readme.is_file()
+
+        # Check run.sh executable permission
+        assert os.access(run_sh, os.X_OK)
+
+        # Check questions.json has 5 scenario questions
+        with open(questions_file, encoding="utf-8") as f:
+            questions = json.load(f)
+            assert len(questions) == 5
+            assert "AgentForge" in questions[0]["question"]
+
+        # Check pyproject.toml has loadtest extra
+        pyproject = project_dir / "backend" / "pyproject.toml"
+        assert pyproject.is_file()
+        content = pyproject.read_text(encoding="utf-8")
+        assert "loadtest" in content
+        assert "locust" in content

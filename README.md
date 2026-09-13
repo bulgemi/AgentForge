@@ -79,6 +79,11 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 - **PostgreSQL 16** + **Redis 7.4** + **Langfuse v3** (ClickHouse + MinIO) + **OpenSearch 2.19.3**
 - `--profile infra`, `--profile observability`, `--profile search`, `--profile all` 등 필요한 스택만 선택 가동할 수 있습니다.
 
+### 5. 📊 자동 생성 부하테스트 환경 (`backend/load_test/`)
+- **실전형 대화 시나리오 내장**: 로그인(`POST /api/v1/auth/login`) ➔ 대화방 생성(`POST /api/v1/chats`) ➔ 5개 기술 질문 순차 SSE 스트리밍 문답 ➔ 로그아웃(`POST /api/v1/auth/logout`) 전 과정을 시뮬레이션합니다.
+- **LLM 특화 응답 지표 분리 측정**: 첫 토큰 도달 지연 시간(**TTFT**, Time To First Token)과 전체 스트리밍 완료 소요 시간(**Total Latency**)을 Locust 커스텀 이벤트로 분리 집계합니다.
+- **질문 커스터마이징 & 원클릭 실행**: `questions.json`으로 코드 수정 없이 시나리오 확장 가능하며, `./run.sh` (대화형 Web UI `http://localhost:8089`) 또는 `./run.sh --headless` (HTML 리포트 자동 생성)로 즉시 실행할 수 있습니다.
+
 ---
 
 ## 📁 생성되는 프로젝트 기본 구조 (Project Layout)
@@ -91,6 +96,7 @@ my-awesome-agent/
 ├── run.sh / run.bat               # 원클릭 인프라 & 개발 서버 동시 실행 스크립트
 ├── backend/                       # FastAPI 백엔드 (Clean Architecture: domain, application, infra)
 │   ├── src/core/                  # 100% 독립 복사된 Core 엔진 (adapter, streaming, database, config)
+│   ├── load_test/                 # 📊 Locust 부하테스트 환경 (locustfile.py, questions.json, run.sh/bat)
 │   ├── .env & .env.sample         # 백엔드 활성 환경 변수 및 공개 템플릿
 │   └── pyproject.toml             # uv / pyproject 기반 의존성 정의
 ├── frontend/                      # Vite + React 멀티 엔트리포인트 (사용자 채팅 포털 & 관리자 콘솔)
