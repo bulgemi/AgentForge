@@ -314,6 +314,7 @@ This project comes pre-configured with standardized AI Developer Harness Skills 
 - **`feature-development`** (`.agents/skills/feature-development/SKILL.md`): End-to-end new feature development harness.
 - **`feature-enhancement`** (`.agents/skills/feature-enhancement/SKILL.md`): Safe feature enhancement, refactoring, and impact analysis harness.
 - **`bugfix`** (`.agents/skills/bugfix/SKILL.md`): RCA, reproducing failing test-driven bugfix harness.
+- **`code-tutor`** (`.agents/skills/code-tutor/SKILL.md`): Code & architecture explanation tutor with 2-stage Mermaid diagrams and ELI15 Q&A storytelling.
 - **Standard 8-Stage Pipeline**:
   `분석` → `파일 단위 상세 설계` → `설계 리뷰(오버엔지니어링 검토)` → `★사용자 승인 게이트` → `GitHub Issue 등록(단계/상태 태그)` → `Issue 기반 구현` → `코드 리뷰` → `기능 점검(신규/회귀 테스트)` → `결과 보고 및 Issue 종료`
 - See [`.agents/skills/shared/workflow-spec.md`](.agents/skills/shared/workflow-spec.md) for GitHub CLI (`gh`) commands, label schema (`type:*`, `stage:*`, `status:*`), and local markdown fallback rules.
