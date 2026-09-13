@@ -8,7 +8,7 @@
 
   [![Python Version](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-  [![Documentation Hub](https://img.shields.io/badge/Docs-Documentation%20Hub-blue.svg)#-공식-문서-가이드-허브-documentation-hub)
+  [![Documentation Hub](https://img.shields.io/badge/Docs-Documentation%20Hub-blue.svg)](#-공식-문서-가이드-허브-documentation-hub)
   [![AI Harness](https://img.shields.io/badge/AI%20Harness-.agents%2Fskills-orange.svg)](docs/skills.md)
   [![Spec-Driven UI](https://img.shields.io/badge/UI%2FUX-Spec--Driven%20(DESIGN.md)-blueviolet.svg)](docs/architecture.md#3-스펙-기반-ui-개발--ai-에이전트-협업-체계-frontenddesignmd)
   [![Quickstart](https://img.shields.io/badge/Quickstart-3--Min%20Guide-FF5722.svg)](docs/quickstart.md)
