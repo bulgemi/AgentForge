@@ -5,7 +5,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml .
-RUN uv pip install --no-cache --system -r <(uv pip compile pyproject.toml)
+RUN uv pip compile pyproject.toml -o requirements.txt && \
+    uv pip install --no-cache --system -r requirements.txt
+
 
 FROM python:3.12-slim AS runner
 
