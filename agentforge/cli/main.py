@@ -9,6 +9,7 @@ from agentforge.cli.commands.build import build_command
 from agentforge.cli.commands.deploy import deploy_command
 from agentforge.cli.commands.dev import dev_command
 from agentforge.cli.commands.new import new_command
+from agentforge.cli.commands.sandbox import sandbox_app
 
 console = Console()
 
@@ -24,6 +25,7 @@ app.command(name="new", help="Scaffold a new standalone AI agent project")(new_c
 app.command(name="dev", help="Run local development servers (Backend + Frontend)")(dev_command)
 app.command(name="build", help="Build Docker container images")(build_command)
 app.command(name="deploy", help="Deploy project to Kubernetes cluster")(deploy_command)
+app.add_typer(sandbox_app, name="sandbox")
 
 
 def main() -> None:

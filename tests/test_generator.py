@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+import subprocess
 import pytest
 
 from agentforge.generator.copier import copy_core_engine
@@ -80,6 +81,32 @@ def test_scaffolding_engine_full_generation():
         assert project_dir.exists()
         assert (project_dir / "README.md").exists()
         
+        # Convenience runner & wrapper scripts check (af, af.bat, run.sh, run.bat, setup.sh, setup.bat)
+        af_wrapper = project_dir / "af"
+        af_bat = project_dir / "af.bat"
+        assert af_wrapper.exists()
+        assert af_bat.exists()
+        assert os.access(af_wrapper, os.X_OK)
+        af_wrapper_content = af_wrapper.read_text(encoding="utf-8")
+        assert "uvx" in af_wrapper_content
+        assert 'exec af "$@"' in af_wrapper_content
+        af_bat_content = af_bat.read_text(encoding="utf-8")
+        assert "uvx" in af_bat_content
+        assert "where af" in af_bat_content
+
+        # Execution check: './af new' must be blocked inside project
+        res_new = subprocess.run(["bash", str(af_wrapper), "new"], capture_output=True, text=True)
+        assert res_new.returncode == 1
+        assert "생성된 프로젝트 내부에서 사용할 수 없습니다" in res_new.stdout or "생성된 프로젝트 내부에서 사용할 수 없습니다" in res_new.stderr
+
+        # Execution check: './af --help' displays project runner commands
+        res_help = subprocess.run(["bash", str(af_wrapper), "--help"], capture_output=True, text=True)
+        assert res_help.returncode == 0
+        assert "sandbox" in res_help.stdout
+        assert "dev" in res_help.stdout
+        assert "build" in res_help.stdout
+        assert "deploy" in res_help.stdout
+
         # Docker Compose & Infrastructure checks
         dc_path = project_dir / "docker-compose.yml"
         assert dc_path.exists()
@@ -248,6 +275,8 @@ def test_scaffolding_engine_full_generation():
         assert "frontend/DESIGN.md" in root_readme_content
         assert "AI Developer Harness & Workflow Skills" in root_readme_content
         assert ".agents/skills" in root_readme_content
+        assert "./af sandbox" in root_readme_content
+        assert "af.bat sandbox" in root_readme_content
 
         # AI Developer Harness Skills (.agents/skills) checks
         skills_dir = project_dir / ".agents" / "skills"
@@ -485,10 +514,6 @@ def test_scaffolding_infra_resilience_contracts():
 
 def test_backend_hatchling_wheel_target_and_editable_resolution():
     """Verify Hatchling correctly resolves the package in backend/src when wheel target packages = ['src'] is configured."""
-    import os
-    import shutil
-    import subprocess
-
     with tempfile.TemporaryDirectory() as tmpdir:
         engine = ScaffoldingEngine()
         project_dir = engine.generate(

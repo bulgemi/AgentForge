@@ -1,6 +1,6 @@
 # ⚡ AgentForge 3분 사용자 가이드 (Quickstart Guide)
 
-> [🏠 README](../README.md) &nbsp;|&nbsp; **[⚡ Quickstart](quickstart.md)** &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; [🐳 Infrastructure](infrastructure.md) &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
+> [🏠 README](../README.md) &nbsp;|&nbsp; **[⚡ Quickstart](quickstart.md)** &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; [🐳 Infrastructure](infrastructure.md) &nbsp;|&nbsp; [🏖️ Sandbox](sandbox.md) &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
 
 ---
 
@@ -229,5 +229,5 @@ AgentForge로 생성된 프로젝트의 실제 UI 화면과 핵심 기능을 둘
 
 ---
 
-> [🏠 README](../README.md) &nbsp;|&nbsp; **[⚡ Quickstart](quickstart.md)** &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; [🐳 Infrastructure](infrastructure.md) &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
+> [🏠 README](../README.md) &nbsp;|&nbsp; **[⚡ Quickstart](quickstart.md)** &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; [🐳 Infrastructure](infrastructure.md) &nbsp;|&nbsp; [🏖️ Sandbox](sandbox.md) &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
 

@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-isolation
+  namespace: {{ sandbox_namespace }}
+  labels:
+    agentforge.io/managed-by: sandbox
+    agentforge.io/developer: {{ developer_name }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # 1. Allow internal traffic within the same sandbox namespace (Backend <-> DB <-> Redis)
+    - from:
+        - podSelector: {}
+    # 2. Allow Ingress Controllers (NGINX, ALB, GCE, AGIC, Rancher cattle-system)
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: ["ingress-nginx", "kube-system", "cattle-system", "default"]
+  egress:
+    # Allow intra-namespace, cluster DNS, and external outbound traffic for LLM APIs and Cloud services
+    - {}
