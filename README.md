@@ -11,6 +11,7 @@
   [![Documentation Hub](https://img.shields.io/badge/Docs-Documentation%20Hub-blue.svg)](#-공식-문서-가이드-허브-documentation-hub)
   [![AI Harness](https://img.shields.io/badge/AI%20Harness-.agents%2Fskills-orange.svg)](docs/skills.md)
   [![Spec-Driven UI](https://img.shields.io/badge/UI%2FUX-Spec--Driven%20(DESIGN.md)-blueviolet.svg)](docs/architecture.md#3-스펙-기반-ui-개발--ai-에이전트-협업-체계-frontenddesignmd)
+  [![Sandbox](https://img.shields.io/badge/Sandbox-Multi--CSP%20%26%20Rancher-8A2BE2.svg)](docs/sandbox.md)
   [![Quickstart](https://img.shields.io/badge/Quickstart-3--Min%20Guide-FF5722.svg)](docs/quickstart.md)
 </div>
 
@@ -57,6 +58,7 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 | [**🏗️ 아키텍처 & 프레임워크 가이드**](docs/architecture.md) | Clean Architecture 모노레포, 에이전트 5종 어댑터, Spec-Driven UI, 엔터프라이즈 기능 | 백엔드/프론트엔드 아키텍처를 깊이 이해하려는 개발자 |
 | [**🛠️ AI 개발 하네스 (Skills) 가이드**](docs/skills.md) | `feature-development`, `feature-enhancement`, `bugfix`, `code-tutor`, 8단계 파이프라인 | AI 코딩 도구(Cursor, Claude Code, Antigravity) 사용자 |
 | [**🐳 로컬 인프라 & 배포 가이드**](docs/infrastructure.md) | Docker Compose 6개 프로파일, 서비스 스택, 대시보드 URL, K8s 클러스터 배포 | 로컬 인프라 제어 및 클라우드 배포 운영자 |
+| [**🏖️ 멀티 CSP 샌드박스 가이드**](docs/sandbox.md) | AWS/GCP/Azure/로컬 K8s 및 Rancher 온디맨드 샌드박스, 실시간 핫리로드, 절전 모드 | 클라우드 원격 개발 및 실시간 코드 동기화 개발자 |
 | [**🌱 환경 변수 & 거버넌스 가이드**](docs/env-vars.md) | 백엔드/프론트엔드 `.env` & `.env.sample` 전체 레퍼런스 및 보안 수칙 | 보안 설정 및 환경 변수 연동 엔지니어 |
 
 ---
@@ -85,6 +87,14 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 - **LLM 특화 응답 지표 분리 측정**: 첫 토큰 도달 지연 시간(**TTFT**, Time To First Token)과 전체 스트리밍 완료 소요 시간(**Total Latency**)을 Locust 커스텀 이벤트로 분리 집계합니다.
 - **질문 커스터마이징 & 원클릭 실행**: `questions.json`으로 코드 수정 없이 시나리오 확장 가능하며, `./run.sh` (대화형 Web UI `http://localhost:8089`) 또는 `./run.sh --headless` (HTML 리포트 자동 생성)로 즉시 실행할 수 있습니다.
 
+### 6. 🏖️ 온디맨드 멀티 CSP 개발자 샌드박스 (`af sandbox`)
+- **멀티 클라우드 및 Rancher 통합**: AWS EKS, GCP GKE, Azure AKS 및 Rancher 환경에서 개발자별 격리 네임스페이스(`sandbox-<user>`)와 함께 Backend, Frontend, ConfigMap 및 Ingress 워크로드를 원클릭 자동 배포합니다.
+- **프로젝트 전용 러너 (`./af`, `af.bat`)**: 전역 CLI 설치 없이도 생성된 프로젝트 루트의 `./af sandbox up`으로 즉시 실행 가능하며, RFC 1123 규격 자동 정규화로 특수문자/중복 접두사 없는 안전한 배포를 보장합니다.
+- **0.5초 무중단 라이브 핫리로드 (`af sandbox watch`)**: 로컬 소스 수정 시 Docker 재빌드 없이 원격 Pod로 변경 사항을 0.5초 내 직접 동기화합니다.
+- **비용 절감 및 포트포워딩**: `af sandbox open --port-forward`로 로컬 포트 터널링을 지원하며, 유휴 시 `af sandbox pause`(Replicas=0)로 클라우드 비용을 0원화합니다.
+- **로컬 0원 검증 (Minikube + Rancher)**: Minikube + Rancher 컨테이너 + `nip.io` 와일드카드 DNS로 로컬 머신에서 100% 동일하게 검증 가능합니다.
+  - *Rancher 웹 접속 & 로그인*: 컨테이너 기동 후 K3s 초기화로 약 1~2분 소요되며, 브라우저 사설 SSL 경고 시 Chrome [고급] ➔ [이동](또는 `thisisunsafe` 타이핑) 후, `docker logs rancher-local 2>&1 | grep "Bootstrap Password:"`로 초기 암호를 확인하여 신규 비밀번호를 **`admin1234!@#$`**로 생성합니다.
+
 ---
 
 ## 📁 생성되는 프로젝트 기본 구조 (Project Layout)
@@ -94,6 +104,7 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 ```text
 my-awesome-agent/
 ├── .agents/skills/                # 🤖 기본 탑재 AI 개발 하네스 & 튜터 (feature, enhancement, bugfix, code-tutor)
+├── af / af.bat                    # ⚡ 프로젝트 수명주기 전용 러너 (sandbox, dev, build, deploy)
 ├── run.sh / run.bat               # 원클릭 인프라 & 개발 서버 동시 실행 스크립트
 ├── backend/                       # FastAPI 백엔드 (Clean Architecture: domain, application, infra)
 │   ├── src/core/                  # 100% 독립 복사된 Core 엔진 (adapter, streaming, database, config)

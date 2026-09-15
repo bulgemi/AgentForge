@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-quota
+  namespace: {{ sandbox_namespace }}
+  labels:
+    agentforge.io/managed-by: sandbox
+    agentforge.io/developer: {{ developer_name }}
+spec:
+  hard:
+    requests.cpu: "1000m"
+    requests.memory: "2Gi"
+    limits.cpu: "4000m"
+    limits.memory: "8Gi"
+    count/pods: "15"
+    services: "10"
+    secrets: "10"
+    configmaps: "10"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sandbox-limits
+  namespace: {{ sandbox_namespace }}
+  labels:
+    agentforge.io/managed-by: sandbox
+    agentforge.io/developer: {{ developer_name }}
+spec:
+  limits:
+    - default:
+        cpu: "1000m"
+        memory: "1Gi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      type: Container

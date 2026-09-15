@@ -1,6 +1,6 @@
 # 🐳 로컬 인프라 & 배포 가이드 (Infrastructure & Deployment Guide)
 
-> [🏠 README](../README.md) &nbsp;|&nbsp; [⚡ Quickstart](quickstart.md) &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; **[🐳 Infrastructure](infrastructure.md)** &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
+> [🏠 README](../README.md) &nbsp;|&nbsp; [⚡ Quickstart](quickstart.md) &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; **[🐳 Infrastructure](infrastructure.md)** &nbsp;|&nbsp; [🏖️ Sandbox](sandbox.md) &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
 
 ---
 
@@ -121,4 +121,88 @@ af deploy --env prd                # 운영 환경 배포
 
 ---
 
-> [🏠 README](../README.md) &nbsp;|&nbsp; [⚡ Quickstart](quickstart.md) &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; **[🐳 Infrastructure](infrastructure.md)** &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
+## 6. Rancher Apps & Marketplace를 통한 Helm 카탈로그 배포 (`charts/`)
+
+AgentForge는 **Rancher(https://github.com/rancher/rancher)**의 대규모 쿠버네티스 관리 환경 및 클라우드 프로덕션 배포를 위해 전용 **Helm Chart 및 Rancher Apps & Marketplace 카탈로그 규격**을 기본 생성합니다.
+
+```text
+charts/my-agent/
+├── Chart.yaml                     # Helm v2 차트 메타데이터
+├── values.yaml                    # 기본 파라미터 (ALB/NGINX Ingress, RDS, ElastiCache, IRSA)
+├── questions.yaml                 # Rancher 대시보드 시각적 웹 폼 명세
+├── app-readme.md                  # Rancher UI 카탈로그 카드 안내문
+├── README.md                      # 파라미터 상세 기술 문서
+└── templates/                     # 쿠버네티스 템플릿
+```
+
+### Helm 차트 패키징 (`af package`)
+```bash
+af package --target rancher        # dist/charts/에 .tgz 및 index.yaml 생성
+```
+
+---
+
+## 7. 다중 CSP (AWS EKS, GCP GKE, Azure AKS) 개발자 샌드박스 (`af sandbox`)
+
+개발자가 클라우드 K8s 환경에서 자신만의 독립된 환경을 즉시 생성하고 로컬 코드와 실시간 연동하며 개발할 수 있는 **온디맨드 개발자 샌드박스** 기능을 제공합니다.
+
+### 1) 다중 CSP 지원 매트릭스
+- **AWS EKS**: AWS ALB Controller Ingress & IRSA (`eks.amazonaws.com/role-arn`)
+- **GCP GKE**: GKE Ingress & Workload Identity (`iam.gke.io/gcp-service-account`)
+- **Azure AKS**: Application Gateway Ingress & Workload Identity (`azure.workload.identity/client-id`)
+
+### 2) 샌드박스 CLI 사용법
+
+```bash
+# 1. 샌드박스 프로비저닝 (AWS EKS, 8시간 TTL 기본)
+af sandbox up --csp aws --name alice --ttl 8h
+
+# 2. GCP GKE 또는 Azure AKS에 생성
+af sandbox up --csp gcp --name alice
+af sandbox up --csp azure --name alice
+
+# 3. 로컬 코드 실시간 동기화 (Hot-Reload)
+af sandbox watch                   # backend/src 소스 수정 시 원격 Pod로 0.5초 내 동기화
+
+# 4. 웹 포털 브라우저 오픈 또는 로컬 포트포워딩
+af sandbox open                    # https://alice.sandbox.myagent.io 접속
+af sandbox open --port-forward     # localhost:5173 -> pod:80 터널링
+
+# 5. 유휴 시 절전 (Replica=0 축소로 클라우드 비용 절감)
+af sandbox pause
+af sandbox resume
+
+# 6. 상태 점검 및 완전 삭제
+af sandbox status
+af sandbox down --force
+```
+
+### 3) 로컬 환경에서의 Rancher 기반 샌드박스 테스트 (Local Testing)
+
+클라우드 비용 없이 로컬 머신(`Docker` + `Minikube`)에서 Rancher 컨테이너와 샌드박스 라이프사이클을 100% 동일하게 검증할 수 있습니다:
+
+1. **로컬 Minikube 및 Rancher Server 기동**:
+   ```bash
+   minikube start --cpus=4 --memory=8192
+   docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 --privileged rancher/rancher:latest
+   ```
+2. **Rancher 접속 및 Minikube Import**:
+   - 브라우저로 `https://localhost:8443` 접속
+     > 💡 **접속 트러블슈팅**:
+     > - **초기 부팅 대기**: K3s/etcd 초기화로 인해 컨테이너 기동 후 약 1~2분 정도 소요될 수 있습니다.
+     > - **SSL 인증서 경고**: 브라우저에서 [고급] ➔ [이동] 클릭 (Chrome에서 차단 시 빈 화면에서 `thisisunsafe` 입력).
+     > - **초기 비밀번호 확인**: `docker logs rancher-local 2>&1 | grep "Bootstrap Password:"` 실행
+     > - **포트/프로토콜**: `https://localhost:8443` 또는 `http://localhost:8080` (자동 리다이렉트) 사용
+   - 초기 부트스트랩 비밀번호 입력 후 새 비밀번호를 **`admin1234!@#$`**로 설정하고 로그인
+   - **Cluster Management** ➔ **Import Existing** 선택 후 클러스터 이름(`local-minikube`) 입력
+   - 발급된 `curl ... | kubectl apply -f -` 명령어를 터미널에서 실행하여 Minikube를 Rancher에 연동
+3. **로컬 와일드카드 도메인(`nip.io`)으로 샌드박스 생성**:
+   ```bash
+   af sandbox up --name dev-local --domain 127.0.0.1.nip.io
+   af sandbox watch                    # 로컬 코드 핫리로드
+   af sandbox open --port-forward      # 로컬호스트 포트포워딩
+   ```
+
+---
+
+> [🏠 README](../README.md) &nbsp;|&nbsp; [⚡ Quickstart](quickstart.md) &nbsp;|&nbsp; [⚙️ CLI & Scaffolding](cli.md) &nbsp;|&nbsp; [🏗️ Architecture](architecture.md) &nbsp;|&nbsp; [🛠️ AI Skills](skills.md) &nbsp;|&nbsp; **[🐳 Infrastructure](infrastructure.md)** &nbsp;|&nbsp; [🏖️ Sandbox](sandbox.md) &nbsp;|&nbsp; [🌱 Env Variables](env-vars.md)
