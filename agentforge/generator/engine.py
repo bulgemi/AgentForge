@@ -371,7 +371,7 @@ Locust 기반 실전 부하테스트 환경이 프로젝트 내에 자동 생성
 ### 9. 프론트엔드 UI/UX 디자인 시스템 및 AI 코딩 협업 (Frontend UI/UX Design System & AI Coding Agent Guidelines)
 AgentForge는 **스펙 기반 UI 개발 (Spec-Driven UI Development)** 방법론을 적용합니다:
 - [`frontend/DESIGN.md`](frontend/DESIGN.md)를 수정하여 프로젝트 고유의 도메인 요구사항, 브랜드 색상, 타이포그래피, 8pt 그리드 여백 및 Do's & Don'ts 규칙을 정의하세요.
-- AI 코딩 어시스턴트(Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity)와 협업할 때 [`frontend/DESIGN.md`](frontend/DESIGN.md)를 **단일 진실 공급원 (Single Source of Truth, SSOT)**으로 지정하면 일관된 고품질 UI 컴포넌트를 생성하고 유지할 수 있습니다.
+- AI 코딩 어시스턴트(Cursor, Claude Code, GitHub Copilot, Windsurf, Antigravity)와 협업할 때 [`frontend/DESIGN.md`](frontend/DESIGN.md)를 **단일 진실 공급원**(Single Source of Truth, SSOT)으로 지정하면 일관된 고품질 UI 컴포넌트를 생성하고 유지할 수 있습니다.
 - 프론트엔드 아키텍처 및 프롬프트 가이드는 [`frontend/README.md`](frontend/README.md)를 참조하세요.
 
 ---

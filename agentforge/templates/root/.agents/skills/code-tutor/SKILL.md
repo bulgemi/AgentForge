@@ -38,7 +38,7 @@ flowchart LR
 ```
 
 ### 1단계: 코드 및 호출 체인 정밀 분석 (Code Investigation)
-1. 사용자가 질문한 기능의 **진입점(Entry Point)**을 탐색합니다 (예: API 엔드포인트, CLI 명령어, 이벤트 리스너).
+1. 사용자가 질문한 기능의 **진입점**(Entry Point)을 탐색합니다 (예: API 엔드포인트, CLI 명령어, 이벤트 리스너).
 2. 호출 체인(Call Chain)을 추적하여 거쳐가는 계층(Controller → Service → Repository / Core → Engine 등)과 연관 모듈을 확인합니다.
 3. 주요 상태 변화, 데이터 모델(스키마/엔티티), 외부 연동(DB, Cache, 외부 API) 및 예외 처리 로직을 파악합니다.
 

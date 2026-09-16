@@ -26,7 +26,7 @@ Whenever the user gives a natural language task, analyze their intent and **auto
 2. **파일 단위 상세 설계 (Design)**: `[NEW]`, `[MODIFY]`, `[DELETE]` 목록과 구체적 함수/클래스 시그니처 명시
 3. **설계 리뷰 (Over-engineering Check)**: YAGNI, 불필요한 추상화/패턴 남용 배제
 4. **★ 사용자 승인 게이트 (Human-in-the-loop Gate)**:
-   > **CRITICAL**: 에이전트는 설계를 자의적으로 확정하고 구현을 시작할 수 없습니다. 설계서 및 오버엔지니어링 검토 내용을 보고하고 **사용자의 명시적 승인(`Proceed` 또는 확인 응답)**을 받은 후에만 5단계로 진행하십시오.
+   > **CRITICAL**: 에이전트는 설계를 자의적으로 확정하고 구현을 시작할 수 없습니다. 설계서 및 오버엔지니어링 검토 내용을 보고하고 **사용자의 명시적 승인**(`Proceed` 또는 확인 응답)을 받은 후에만 5단계로 진행하십시오.
 5. **GitHub Issue & 태그 등록**: `gh issue create` (또는 `.github/issues/` 로컬 마크다운 폴백)
 6. **Issue 기반 정밀 구현**: 승인된 파일 단위 설계서 범위 내에서만 구현
 7. **코드 리뷰**: `git diff` 점검, 보안 취약점 및 부작용 체크

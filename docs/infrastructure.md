@@ -123,7 +123,7 @@ af deploy --env prd                # 운영 환경 배포
 
 ## 6. Rancher Apps & Marketplace를 통한 Helm 카탈로그 배포 (`charts/`)
 
-AgentForge는 **Rancher(https://github.com/rancher/rancher)**의 대규모 쿠버네티스 관리 환경 및 클라우드 프로덕션 배포를 위해 전용 **Helm Chart 및 Rancher Apps & Marketplace 카탈로그 규격**을 기본 생성합니다.
+AgentForge는 **Rancher**(https://github.com/rancher/rancher)의 대규모 쿠버네티스 관리 환경 및 클라우드 프로덕션 배포를 위해 전용 **Helm Chart 및 Rancher Apps & Marketplace 카탈로그 규격**을 기본 생성합니다.
 
 ```text
 charts/my-agent/
@@ -193,7 +193,7 @@ af sandbox down --force
      > - **SSL 인증서 경고**: 브라우저에서 [고급] ➔ [이동] 클릭 (Chrome에서 차단 시 빈 화면에서 `thisisunsafe` 입력).
      > - **초기 비밀번호 확인**: `docker logs rancher-local 2>&1 | grep "Bootstrap Password:"` 실행
      > - **포트/프로토콜**: `https://localhost:8443` 또는 `http://localhost:8080` (자동 리다이렉트) 사용
-   - 초기 부트스트랩 비밀번호 입력 후 새 비밀번호를 **`admin1234!@#$`**로 설정하고 로그인
+   - 초기 부트스트랩 비밀번호 입력 후 새 비밀번호를 `admin1234!@#$`로 설정하고 로그인
    - **Cluster Management** ➔ **Import Existing** 선택 후 클러스터 이름(`local-minikube`) 입력
    - 발급된 `curl ... | kubectl apply -f -` 명령어를 터미널에서 실행하여 Minikube를 Rancher에 연동
 3. **로컬 와일드카드 도메인(`nip.io`)으로 샌드박스 생성**:
