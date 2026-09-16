@@ -266,6 +266,36 @@ class SandboxManager:
                     raise RuntimeError(res.stderr)
                 console.print(f"[green]✓ Applied workload {f.name} to namespace '{namespace}'[/green]")
 
+        # Create alias/compat Service 'backend' if backend_svc_name exists and differs from 'backend'
+        # This ensures Frontend Nginx proxy (http://backend:8000) resolves in Kubernetes CoreDNS
+        if backend_svc_name and backend_svc_name != "backend":
+            backend_compat_svc = {
+                "apiVersion": "v1",
+                "kind": "Service",
+                "metadata": {
+                    "name": "backend",
+                    "namespace": namespace,
+                    "labels": {
+                        "app.kubernetes.io/component": "backend-compat",
+                    },
+                },
+                "spec": {
+                    "selector": {
+                        "app": backend_svc_name,
+                    },
+                    "ports": [
+                        {
+                            "port": 8000,
+                            "targetPort": 8000,
+                        }
+                    ],
+                },
+            }
+            rendered_compat = yaml.safe_dump(backend_compat_svc, default_flow_style=False, sort_keys=False)
+            applied_manifests.append(rendered_compat)
+            if not dry_run and shutil.which("kubectl"):
+                subprocess.run(["kubectl", "apply", "-n", namespace, "-f", "-"], input=rendered_compat, text=True, capture_output=True)
+
         # Automatically create Ingress if backend/frontend services exist and no ingress defined
         has_ingress = any("kind: Ingress" in m for m in applied_manifests)
         if not has_ingress and (backend_svc_name or frontend_svc_name):
@@ -316,4 +346,34 @@ class SandboxManager:
                     console.print(f"[green]✓ Applied sandbox ingress to namespace '{namespace}'[/green]")
 
         return applied_manifests
+
+    @staticmethod
+    def is_minikube_cluster() -> bool:
+        """Check if current active kubectl context points to a Minikube cluster."""
+        if not shutil.which("kubectl"):
+            return False
+        res = subprocess.run(["kubectl", "config", "current-context"], capture_output=True, text=True)
+        if res.returncode == 0 and "minikube" in res.stdout.lower():
+            return True
+        res_nodes = subprocess.run(["kubectl", "get", "nodes", "-o", "jsonpath={.items[*].metadata.name}"], capture_output=True, text=True)
+        if res_nodes.returncode == 0 and "minikube" in res_nodes.stdout.lower():
+            return True
+        return False
+
+    @staticmethod
+    def load_images_to_minikube(images: list[str]) -> bool:
+        """Load local docker images directly into Minikube cluster."""
+        if not shutil.which("minikube"):
+            return False
+        all_success = True
+        for img in images:
+            console.print(f"[dim]Loading image '{img}' into Minikube cluster...[/dim]")
+            res = subprocess.run(["minikube", "image", "load", img], capture_output=True, text=True)
+            if res.returncode == 0:
+                console.print(f"[green]✓ Successfully loaded '{img}' into Minikube[/green]")
+            else:
+                console.print(f"[yellow]⚠ Failed to load '{img}' into Minikube: {res.stderr.strip()}[/yellow]")
+                all_success = False
+        return all_success
+
 

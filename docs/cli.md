@@ -113,10 +113,10 @@ af dev
 
 ### 2) Docker 이미지 빌드 (`agentforge build` / `af build`)
 
-프로덕션용 멀티스테이지 백엔드 및 프론트엔드(Nginx 경량 이미지) 컨테이너 이미지를 빌드합니다.
+프로덕션용 멀티스테이지 백엔드 및 프론트엔드(Nginx 경량 이미지) 컨테이너 이미지를 빌드합니다. 현재 디렉토리명(`project_name`)을 자동으로 인식하여 K8s 매니페스트 및 호환 태그(`{project_name}-backend:{tag}`, `{clean_name}-backend:{tag}`, `agent-backend:{tag}`)를 한 번에 다중 태깅합니다.
 
 ```bash
-# 기본 로컬 태그 빌드
+# 기본 로컬 태그 빌드 (프로젝트명 태그 및 호환 태그 자동 생성)
 af build
 
 # 특정 태그 및 프론트엔드/백엔드 개별 지정

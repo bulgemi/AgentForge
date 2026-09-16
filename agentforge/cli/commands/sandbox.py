@@ -35,6 +35,7 @@ def sandbox_up(
     rancher_project_id: Optional[str] = typer.Option(None, "--rancher-project", "-p", help="Rancher Project ID (e.g. c-xxxx:p-yyyy)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Render and display generated Kubernetes manifests without applying"),
     watch: bool = typer.Option(False, "--watch", "-w", help="Start real-time code watcher immediately after provisioning"),
+    build: bool = typer.Option(True, "--build/--no-build", help="Automatically build and load container images into local cluster"),
 ) -> None:
     """Create and start a developer sandbox."""
     dev_name = name or SandboxManager.get_default_developer_name()
@@ -57,6 +58,25 @@ def sandbox_up(
     console.print(f"• Endpoint:    [bold underline]https://{dev_name}.{domain}[/bold underline]\n")
 
     manager = SandboxManager()
+    is_minikube = manager.is_minikube_cluster()
+
+    # Pre-build and load images for local Minikube cluster to avoid ImagePullBackOff
+    if build and not dry_run and is_minikube:
+        backend_dir = current_dir / "backend"
+        frontend_dir = current_dir / "frontend"
+        if backend_dir.exists() or frontend_dir.exists():
+            console.print("[bold blue]📦 Local Minikube cluster detected. Preparing container images...[/bold blue]")
+            from agentforge.cli.commands.build import build_command
+            try:
+                build_command(tag="latest", target="all")
+                images_to_load = [
+                    f"{project_name}-backend:latest",
+                    f"{project_name}-frontend:latest",
+                ]
+                manager.load_images_to_minikube(images_to_load)
+            except Exception as e:
+                console.print(f"[yellow]⚠ Warning: Image build/load encountered an issue: {e}[/yellow]")
+
     manifests = manager.generate_sandbox_artifacts(
         developer_name=dev_name,
         project_name=project_name,
