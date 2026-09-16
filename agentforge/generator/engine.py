@@ -328,8 +328,14 @@ AWS EKS, GCP GKE, Azure AKS 및 Rancher 클라우드 쿠버네티스 환경에�
 > ```
 
 ```bash
-# 1. 샌드박스 프로비저닝 (기본 8시간 TTL, 네임스페이스 sandbox-<user> 생성)
+# 1. 샌드박스 프로비저닝 (Minikube 환경 감지 시 컨테이너 이미지 자동 빌드 & 적재)
 ./af sandbox up --csp aws --name $USER --ttl 8h
+
+# Rancher Project 연동 (중앙 거버넌스 및 대시보드 자동 바인딩)
+./af sandbox up --rancher-project c-m-xxxx:p-yyyy
+
+# (선택) 이미지 자동 빌드를 건너뛰고 매니페스트만 적용
+./af sandbox up --no-build
 
 # 2. 실시간 소스코드 핫리로드 (backend/src 수정 시 원격 Pod로 0.5초 내 동기화)
 ./af sandbox watch

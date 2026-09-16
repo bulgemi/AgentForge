@@ -90,10 +90,26 @@ AgentForge의 세부 아키텍처와 운영 매뉴얼은 목적별 전문 서브
 ### 6. 🏖️ 온디맨드 멀티 CSP 개발자 샌드박스 (`af sandbox`)
 - **멀티 클라우드 및 Rancher 통합**: AWS EKS, GCP GKE, Azure AKS 및 Rancher 환경에서 개발자별 격리 네임스페이스(`sandbox-<user>`)와 함께 Backend, Frontend, ConfigMap 및 Ingress 워크로드를 원클릭 자동 배포합니다.
 - **프로젝트 전용 러너 (`./af`, `af.bat`)**: 전역 CLI 설치 없이도 생성된 프로젝트 루트의 `./af sandbox up`으로 즉시 실행 가능하며, RFC 1123 규격 자동 정규화로 특수문자/중복 접두사 없는 안전한 배포를 보장합니다.
+- **로컬 K8s 자동 빌드 & 이미지 적재 (`--build`)**: 로컬 Minikube 환경 감지 시 프로젝트명 기반 컨테이너 이미지를 자동 빌드하고 `minikube image load`를 통해 클러스터 노드로 즉시 적재하여 `ImagePullBackOff` 없이 파드를 즉시 기동합니다.
+- **프론트엔드-백엔드 통신 호환 보장**: 프론트엔드 Nginx의 `proxy_pass http://backend:8000;` 설정과 완벽히 연동되도록 K8s CoreDNS 호환 `backend` 서비스 alias를 자동 생성합니다.
 - **0.5초 무중단 라이브 핫리로드 (`af sandbox watch`)**: 로컬 소스 수정 시 Docker 재빌드 없이 원격 Pod로 변경 사항을 0.5초 내 직접 동기화합니다.
 - **비용 절감 및 포트포워딩**: `af sandbox open --port-forward`로 로컬 포트 터널링을 지원하며, 유휴 시 `af sandbox pause`(Replicas=0)로 클라우드 비용을 0원화합니다.
 - **로컬 0원 검증 (Minikube + Rancher)**: Minikube + Rancher 컨테이너 + `nip.io` 와일드카드 DNS로 로컬 머신에서 100% 동일하게 검증 가능합니다.
   - *Rancher 웹 접속 & 로그인*: 컨테이너 기동 후 K3s 초기화로 약 1~2분 소요되며, 브라우저 사설 SSL 경고 시 Chrome [고급] ➔ [이동](또는 `thisisunsafe` 타이핑) 후, `docker logs rancher-local 2>&1 | grep "Bootstrap Password:"`로 초기 암호를 확인하여 신규 비밀번호를 **`admin1234!@#$`**로 생성합니다.
+  - *Minikube 연동 시 Server URL 주의*: Minikube 클러스터 에이전트가 Mac 호스트의 Rancher로 정상 연결될 수 있도록 Rancher Server URL을 Minikube 게이트웨이 IP인 `https://192.168.49.1:8443`으로 설정합니다 (`docker exec rancher-local kubectl patch settings.management.cattle.io server-url --type=merge -p '{"value":"https://192.168.49.1:8443"}'`).
+  - *Rancher Project 자동 귀속*: `./af sandbox up --rancher-project <PROJECT_ID>` 옵션을 사용하면 샌드박스가 Rancher의 프로젝트 하위로 자동 바인딩되어 중앙 정책과 RBAC이 함께 적용됩니다.
+
+#### 🌐 지원 인프라 및 Rancher 연동 요약표 (Quick Reference Matrix)
+
+| 환경 (Environment) | 인프라 유형 | Rancher 서버 설치 | 클러스터 통신 / Server URL | 샌드박스 프로비저닝 명령어 | 상세 가이드 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Local Minikube** | 로컬 단일 노드 | Docker 단일 컨테이너 | `https://192.168.49.1:8443` (Host Gateway) | `./af sandbox up --build` | [보기](docs/sandbox.md#41-로컬-minikube-연동-가이드) |
+| **Local K3s / K3d** | 로컬 경량 K8s | Docker 단일 컨테이너 | `https://host.k3d.internal:8443` 또는 Docker Bridge | `./af sandbox up --build` | [보기](docs/sandbox.md#42-로컬-k3s--k3d-경량-쿠버네티스-연동-가이드) |
+| **AWS EKS** | 퍼블릭 클라우드 | Helm HA Chart (`cert-manager`) | AWS NLB / Route53 공개 FQDN | `./af sandbox up --csp aws --rancher-project <ID>` | [보기](docs/sandbox.md#43-aws-eks-클러스터-연동-가이드) |
+| **GCP GKE** | 퍼블릭 클라우드 | Helm HA Chart (`cert-manager`) | Cloud Load Balancer / Cloud DNS FQDN | `./af sandbox up --csp gcp --rancher-project <ID>` | [보기](docs/sandbox.md#44-gcp-gke-클러스터-연동-가이드) |
+| **Azure AKS** | 퍼블릭 클라우드 | Helm HA Chart (`cert-manager`) | Azure App Gateway / Azure DNS FQDN | `./af sandbox up --csp azure --rancher-project <ID>` | [보기](docs/sandbox.md#45-azure-aks-클러스터-연동-가이드) |
+
+> 📖 **상세 가이드**: Rancher 서버 설치(Docker vs Helm HA), 환경별 클러스터 Import 등록, 네트워크 트러블슈팅 및 3단계 온디맨드 프로비저닝 절차는 [온디맨드 개발자 샌드박스 & Rancher 통합 완벽 가이드 (`docs/sandbox.md`)](docs/sandbox.md)에서 확인하실 수 있습니다.
 
 ---
 
