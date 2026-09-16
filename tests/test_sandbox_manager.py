@@ -55,6 +55,23 @@ def test_generate_sandbox_artifacts_aws():
     assert netpol_data["metadata"]["namespace"] == "sandbox-charlie"
     assert netpol_data["kind"] == "NetworkPolicy"
 
+    # Check resourcequota and limitrange manifest
+    docs = list(yaml.safe_load_all(manifests["resourcequota.yaml"]))
+    quota_data = docs[0]
+    limit_data = docs[1]
+
+    assert quota_data["metadata"]["namespace"] == "sandbox-charlie"
+    assert quota_data["spec"]["hard"]["limits.cpu"] == "2000m"
+    assert quota_data["spec"]["hard"]["limits.memory"] == "2Gi"
+    assert quota_data["spec"]["hard"]["requests.cpu"] == "500m"
+    assert quota_data["spec"]["hard"]["requests.memory"] == "1Gi"
+
+    assert limit_data["metadata"]["namespace"] == "sandbox-charlie"
+    assert limit_data["spec"]["limits"][0]["default"]["cpu"] == "500m"
+    assert limit_data["spec"]["limits"][0]["default"]["memory"] == "512Mi"
+    assert limit_data["spec"]["limits"][0]["defaultRequest"]["cpu"] == "100m"
+    assert limit_data["spec"]["limits"][0]["defaultRequest"]["memory"] == "128Mi"
+
     # Check values override
     values_data = yaml.safe_load(manifests["values-sandbox.yaml"])
     assert values_data["backend"]["replicaCount"] == 1
