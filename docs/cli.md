@@ -73,8 +73,8 @@ af new <프로젝트명> [OPTIONS]
 
 | 옵션명 | 단축형 | 기본값 | 선택 가능 값 | 설명 |
 | :--- | :---: | :---: | :--- | :--- |
-| `--framework` | `-m` | `langgraph` | `langgraph`, `langchain`, `deepagent`, `adk`, `bedrock` | 프로젝트에 탑재할 에이전트 오케스트레이션 프레임워크 |
-| `--frontend` | `-f` | `react` | `react` (또는 `react-vite`), `streamlit`, `none` | 사용자 인터페이스 템플릿 종류 |
+| `--framework` | `-f` | `langgraph` | `langgraph`, `langchain`, `deepagent`, `adk`, `bedrock` | 프로젝트에 탑재할 에이전트 오케스트레이션 프레임워크 |
+| `--frontend` | `-ui` | `react` | `react` (또는 `react-vite`), `streamlit`, `none` | 사용자 인터페이스 템플릿 종류 |
 | `--path` | `-p` | 현재 디렉토리 (`.`) | 유효한 디렉토리 경로 문자열 | 프로젝트 폴더가 생성될 부모 디렉토리 위치 |
 | `--force` | | `False` | 플래그 (지정 시 `True`) | 대상 폴더가 이미 존재하더라도 강제로 덮어쓰기 |
 
