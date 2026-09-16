@@ -34,7 +34,7 @@ def dev_command(
     console.print(f"• Backend API: [bold green]http://{host}:{port}[/bold green] (Docs: http://{host}:{port}/docs)")
     if frontend_dir.exists():
         console.print(f"• Frontend UI: [bold green]http://localhost:{frontend_port}[/bold green]")
-        console.print(f"• Admin UI:    [bold green]http://localhost:{frontend_port}/admin/[/bold green]\n")
+        console.print(f"• Admin UI:    [bold green]http://localhost:{frontend_port}/admin.html[/bold green]\n")
 
     # Launch Backend with uvicorn via subprocess
     backend_cmd = [
