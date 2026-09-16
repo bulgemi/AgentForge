@@ -183,7 +183,7 @@ af sandbox down --force
 
 1. **로컬 Minikube 및 Rancher Server 기동**:
    ```bash
-   minikube start --cpus=4 --memory=8192
+   minikube start
    docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 --privileged rancher/rancher:latest
    ```
 2. **Rancher 접속 및 Minikube Import**:
