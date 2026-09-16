@@ -234,7 +234,7 @@ flowchart LR
 
 - **Step 1: Minikube 기동 및 상태 확인**
   ```bash
-  minikube start --cpus=4 --memory=8192
+  minikube start
   kubectl config current-context   # 'minikube' 확인
   ```
 
