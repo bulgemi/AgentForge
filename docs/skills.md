@@ -81,7 +81,7 @@ flowchart TD
    - **최소 변경 원칙 (Minimal Diff)**: 기존 코드와 패턴을 최대한 재사용
 4. **[★ 사용자 승인 게이트 (Human-in-the-loop Gate)]**:
    - 에이전트는 설계를 임의로 확정하고 구현을 시작하지 않습니다.
-   - 설계서와 오버엔지니어링 검토 결과를 사용자에게 보고하고, **명시적 승인(`Proceed` 또는 확인)**을 획득해야 4단계로 진입합니다.
+   - 설계서와 오버엔지니어링 검토 결과를 사용자에게 보고하고, **명시적 승인**(`Proceed` 또는 확인)을 획득해야 4단계로 진입합니다.
 5. **[4단계] GitHub Issue & 태그 등록**:
    - GitHub CLI(`gh`)를 통해 공식 Issue를 생성하고 라벨(`type:*`, `stage:implementation`, `status:in-progress`)을 부착합니다.
    - `gh` 미인증 환경에서는 프로젝트 내 `.github/issues/` 로컬 마크다운 파일로 자동 폴백합니다.

@@ -4,7 +4,7 @@
 
 ---
 
-AgentForge는 엔터프라이즈 환경에서 검증된 **Clean Architecture 모노레포 패턴**과 **독립형 코어 엔진(Standalone Core)**을 채택하여 비즈니스 로직과 외부 인프라를 완벽히 격리합니다.
+AgentForge는 엔터프라이즈 환경에서 검증된 **Clean Architecture 모노레포 패턴**과 **독립형 코어 엔진**(Standalone Core)을 채택하여 비즈니스 로직과 외부 인프라를 완벽히 격리합니다.
 
 ---
 
